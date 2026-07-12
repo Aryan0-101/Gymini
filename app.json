@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "Gymini",
+    "slug": "gymini",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/gymini_logo.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/gymini_logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#26211D"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.gymini.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#26211D",
+        "foregroundImage": "./assets/gymini_logo.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/gymini_logo.png"
+    },
+    "plugins": [
+      "expo-sqlite",
+      "expo-font",
+      "expo-image"
+    ]
+  }
+}
