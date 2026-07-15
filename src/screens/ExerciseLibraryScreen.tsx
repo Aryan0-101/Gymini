@@ -34,7 +34,7 @@ export default function ExerciseLibraryScreen({ route }: any) {
   const [exercises, setExercises] = useState<ExerciseItem[]>([]);
   const [search, setSearch] = useState('');
   const [activeFilters, setActiveFilters] = useState<string[]>(['All']);
-  const [activeSubFilter, setActiveSubFilter] = useState<string | null>(null);
+  const [activeSubFilters, setActiveSubFilters] = useState<Record<string, string[]>>({});
   const [expandedFilter, setExpandedFilter] = useState<string | null>(null);
   const [selectedExercise, setSelectedExercise] = useState<ExerciseItem | null>(null);
   const assignToDay = route?.params?.assignToDay;
@@ -104,35 +104,44 @@ export default function ExerciseLibraryScreen({ route }: any) {
     
     if (activeFilters.includes('All')) return true;
 
-    let isMatch = false;
-
     const activeMuscleFilters = activeFilters.filter(f => f !== 'Equipment');
+    const hasEquipmentFilter = activeFilters.includes('Equipment');
+
+    let matchesMuscles = activeMuscleFilters.length === 0;
+    
     if (activeMuscleFilters.length > 0) {
-      if (activeSubFilter && expandedFilter && filterMap[expandedFilter]?.includes(activeSubFilter)) {
-        isMatch = isMatch || ex.primaryMuscles.some(m => m.toLowerCase() === activeSubFilter.toLowerCase());
+      const acceptableMuscles = new Set<string>();
+      activeMuscleFilters.forEach(mf => {
+        const subs = activeSubFilters[mf];
+        if (subs && subs.length > 0) {
+          subs.forEach(s => acceptableMuscles.add(s.toLowerCase()));
+        } else {
+          (filterMap[mf] || []).forEach(s => acceptableMuscles.add(s.toLowerCase()));
+        }
+      });
+      
+      matchesMuscles = ex.primaryMuscles.some(m => acceptableMuscles.has(m.toLowerCase()));
+    }
+
+    let matchesEquipment = !hasEquipmentFilter;
+    if (hasEquipmentFilter) {
+      const equipSubs = activeSubFilters['Equipment'];
+      if (equipSubs && equipSubs.length > 0) {
+        matchesEquipment = Boolean(ex.equipment && equipSubs.includes(ex.equipment.toLowerCase()));
       } else {
-        const targetMuscles = activeMuscleFilters.flatMap(f => filterMap[f] || []);
-        isMatch = isMatch || ex.primaryMuscles.some(m => targetMuscles.includes(m.toLowerCase()));
+        matchesEquipment = Boolean(!ex.equipment || ex.equipment === 'body only');
       }
     }
 
-    if (activeFilters.includes('Equipment')) {
-      if (activeSubFilter && expandedFilter === 'Equipment') {
-        isMatch = isMatch || Boolean(ex.equipment && ex.equipment.toLowerCase() === activeSubFilter.toLowerCase());
-      } else {
-        isMatch = isMatch || Boolean(!ex.equipment || ex.equipment === 'body only');
-      }
-    }
-
-    return isMatch;
+    return matchesMuscles && matchesEquipment;
   });
 
   const handleFilterPress = (filter: string) => {
-    setExpandedFilter(null); // Always close carousel on primary tap
-    setActiveSubFilter(null);
+    setExpandedFilter(null);
 
     if (filter === 'All') {
       setActiveFilters(['All']);
+      setActiveSubFilters({});
       return;
     }
 
@@ -140,7 +149,10 @@ export default function ExerciseLibraryScreen({ route }: any) {
       let next = prev.filter(f => f !== 'All');
       if (next.includes(filter)) {
         next = next.filter(f => f !== filter);
-        if (next.length === 0) return ['All'];
+        if (next.length === 0) {
+          setActiveSubFilters({});
+          return ['All'];
+        }
         return next;
       }
       return [...next, filter];
@@ -150,15 +162,29 @@ export default function ExerciseLibraryScreen({ route }: any) {
   const handleFilterLongPress = (filter: string) => {
     if (filter === 'All') return;
     
-    // Automatically select it if not already selected
     setActiveFilters(prev => {
       let next = prev.filter(f => f !== 'All');
       if (!next.includes(filter)) next = [...next, filter];
       return next;
     });
 
-    setActiveSubFilter(null);
     setExpandedFilter(filter);
+  };
+
+  const handleSubFilterPress = (sub: string) => {
+    if (!expandedFilter) return;
+    setActiveSubFilters(prev => {
+      const currentSubs = prev[expandedFilter] || [];
+      if (currentSubs.includes(sub)) {
+        return { ...prev, [expandedFilter]: currentSubs.filter(s => s !== sub) };
+      }
+      return { ...prev, [expandedFilter]: [...currentSubs, sub] };
+    });
+  };
+
+  const clearSubFilters = () => {
+    if (!expandedFilter) return;
+    setActiveSubFilters(prev => ({ ...prev, [expandedFilter]: [] }));
   };
 
   const renderItem = ({ item }: { item: ExerciseItem }) => (
@@ -221,7 +247,8 @@ export default function ExerciseLibraryScreen({ route }: any) {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
             {FILTERS.map(filter => {
               const isActive = activeFilters.includes(filter);
-              const isEquipmentNoSub = filter === 'Equipment' && !activeSubFilter && isActive;
+              const subs = activeSubFilters[filter] || [];
+              const isEquipmentNoSub = filter === 'Equipment' && subs.length === 0 && isActive;
               return (
                 <Pressable 
                   key={filter} 
@@ -240,22 +267,25 @@ export default function ExerciseLibraryScreen({ route }: any) {
           {expandedFilter && filterMap[expandedFilter] && (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.filterScroll, { marginTop: 8 }]}>
               <Pressable 
-                style={[styles.subFilterBtn, !activeSubFilter && styles.subFilterBtnActive]}
-                onPress={() => setActiveSubFilter(null)}
+                style={[styles.subFilterBtn, !(activeSubFilters[expandedFilter]?.length > 0) && styles.subFilterBtnActive]}
+                onPress={clearSubFilters}
               >
-                <Text style={[styles.subFilterText, !activeSubFilter && styles.subFilterTextActive]}>
+                <Text style={[styles.subFilterText, !(activeSubFilters[expandedFilter]?.length > 0) && styles.subFilterTextActive]}>
                   {expandedFilter === 'Equipment' ? 'Body Only' : 'All ' + expandedFilter}
                 </Text>
               </Pressable>
-              {filterMap[expandedFilter].map(sub => (
-                <Pressable 
-                  key={sub} 
-                  style={[styles.subFilterBtn, activeSubFilter === sub && styles.subFilterBtnActive]}
-                  onPress={() => setActiveSubFilter(sub)}
-                >
-                  <Text style={[styles.subFilterText, activeSubFilter === sub && styles.subFilterTextActive]}>{sub}</Text>
-                </Pressable>
-              ))}
+              {filterMap[expandedFilter].map(sub => {
+                const isSelected = activeSubFilters[expandedFilter]?.includes(sub);
+                return (
+                  <Pressable 
+                    key={sub} 
+                    style={[styles.subFilterBtn, isSelected && styles.subFilterBtnActive]}
+                    onPress={() => handleSubFilterPress(sub)}
+                  >
+                    <Text style={[styles.subFilterText, isSelected && styles.subFilterTextActive]}>{sub}</Text>
+                  </Pressable>
+                );
+              })}
             </ScrollView>
           )}
         </View>

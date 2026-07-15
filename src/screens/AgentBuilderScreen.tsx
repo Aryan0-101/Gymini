@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, Pressable, ActivityIndicator, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -13,6 +13,43 @@ export default function AgentBuilderScreen() {
   const [loading, setLoading] = useState(false);
   const [workout, setWorkout] = useState<any>(null);
   const [messages, setMessages] = useState<{role: string, text: string}[]>([]);
+
+  useEffect(() => {
+    async function loadSession() {
+      try {
+        const row = await db.getFirstAsync<any>('SELECT * FROM ai_chat_session WHERE id = 1');
+        if (row) {
+          if (row.messages_json) setMessages(JSON.parse(row.messages_json));
+          if (row.workout_json) setWorkout(JSON.parse(row.workout_json));
+        }
+      } catch (e) {
+        console.error("Could not load AI chat session", e);
+      }
+    }
+    loadSession();
+  }, [db]);
+
+  useEffect(() => {
+    async function saveSession() {
+      try {
+        await db.runAsync(
+          'INSERT OR REPLACE INTO ai_chat_session (id, messages_json, workout_json) VALUES (1, ?, ?)',
+          [JSON.stringify(messages), workout ? JSON.stringify(workout) : null]
+        );
+      } catch (e) {
+        console.error("Could not save AI chat session", e);
+      }
+    }
+    if (messages.length > 0) {
+      saveSession();
+    }
+  }, [messages, workout, db]);
+
+  const clearSession = () => {
+    setMessages([]);
+    setWorkout(null);
+    db.runAsync('DELETE FROM ai_chat_session WHERE id = 1').catch(console.error);
+  };
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
@@ -57,7 +94,7 @@ export default function AgentBuilderScreen() {
             }
           ]
         }
-        5. CRITICAL: You MUST return exactly 5 UNIQUE exercises. DO NOT repeat the same exercise twice.
+        5. CRITICAL: Provide an appropriate number of UNIQUE exercises based on the user's request (e.g., if they ask for 7, give 7). If they don't specify a number, default to exactly 5 exercises. DO NOT repeat the same exercise twice.
         Note: If an exercise is timed (like a plank), set "reps" to "0" and provide "duration_seconds".
 
         VALID EXERCISES DATABASE (DO NOT USE ANY EXERCISE NOT ON THIS LIST):
@@ -152,6 +189,12 @@ export default function AgentBuilderScreen() {
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'padding'} keyboardVerticalOffset={90} style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         
+        {messages.length > 0 && (
+          <Pressable onPress={clearSession} style={{ alignSelf: 'center', paddingVertical: 8, paddingHorizontal: 16, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 20, marginBottom: 8 }}>
+            <Text style={{ color: theme.colors.onPrimary, fontSize: 12, fontFamily: theme.typography.labelSm.fontFamily }}>RESET SESSION</Text>
+          </Pressable>
+        )}
+        
         {messages.map((msg, idx) => (
           <View key={idx} style={[styles.bubbleWrapper, msg.role === 'user' ? styles.userBubbleWrapper : styles.aiBubbleWrapper]}>
             {msg.role === 'ai' && (
@@ -219,7 +262,7 @@ export default function AgentBuilderScreen() {
           placeholderTextColor="rgba(255,255,255,0.4)"
           value={prompt}
           onChangeText={setPrompt}
-          onSubmitEditing={handleGenerate}
+          multiline={true}
         />
         <Pressable style={styles.sendBtn} onPress={handleGenerate} disabled={loading}>
           <MaterialIcons name="send" size={18} color="#fff" />
@@ -257,7 +300,7 @@ const styles = StyleSheet.create({
   startBtn: { flex: 1, borderWidth: 1, borderColor: theme.colors.primary, paddingVertical: 12, borderRadius: 4, alignItems: 'center' },
   startBtnText: { color: theme.colors.primary, fontFamily: theme.typography.labelMd.fontFamily, fontSize: 13 },
   inputArea: { padding: 16, backgroundColor: theme.colors.primary, borderTopWidth: 1, borderColor: '#3A332C', flexDirection: 'row', alignItems: 'center', gap: 12 },
-  input: { flex: 1, backgroundColor: '#1F1B18', borderWidth: 1, borderColor: '#3A332C', color: theme.colors.onPrimary, fontFamily: theme.typography.bodyMd.fontFamily, fontSize: 16, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 24 },
+  input: { flex: 1, backgroundColor: '#1F1B18', borderWidth: 1, borderColor: '#3A332C', color: theme.colors.onPrimary, fontFamily: theme.typography.bodyMd.fontFamily, fontSize: 16, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 14, borderRadius: 24, minHeight: 52, maxHeight: 120 },
   sendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: theme.colors.accentFocus, alignItems: 'center', justifyContent: 'center' },
   sendBtnText: { color: '#fff', fontSize: 18 }
 });

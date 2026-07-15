@@ -34,6 +34,16 @@ export function DatabaseInitializer({ children }: { children: React.ReactNode })
           );
         `);
 
+        // Create table to persist the AI chat session state
+        await db.execAsync(`
+          CREATE TABLE IF NOT EXISTS ai_chat_session (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            messages_json TEXT,
+            workout_json TEXT,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          );
+        `);
+
         setIsReady(true);
       } catch (e) {
         console.error("Failed to initialize local DB extensions:", e);

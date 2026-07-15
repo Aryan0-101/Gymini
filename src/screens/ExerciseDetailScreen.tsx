@@ -30,13 +30,13 @@ export default function ExerciseDetailScreen({ route }: any) {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         
         {parsedImages.length > 0 ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} pagingEnabled style={{ height: 350, backgroundColor: theme.colors.surfaceMuted }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} pagingEnabled style={{ height: 400, backgroundColor: theme.colors.background, paddingTop: 40 }}>
             {parsedImages.map((imgPath: string, idx: number) => (
               <Image 
                 key={idx}
                 source={{ uri: `${CONFIG.ASSET_BASE_URL}/${imgPath.replace(/\\/g, '/')}` }} 
                 style={styles.heroImage} 
-                resizeMode="cover" 
+                resizeMode="contain" 
               />
             ))}
           </ScrollView>
@@ -88,8 +88,8 @@ const styles = StyleSheet.create({
   fabText: { color: theme.colors.onPrimary, fontSize: 32, lineHeight: 34 },
   container: { flex: 1, backgroundColor: theme.colors.background },
   scrollContent: { paddingBottom: 60 },
-  heroImage: { width: width, height: 350, backgroundColor: theme.colors.surfaceMuted },
-  content: { padding: theme.spacing.gutterPanel, marginTop: -30, backgroundColor: theme.colors.background, borderTopLeftRadius: 30, borderTopRightRadius: 30 },
+  heroImage: { width: width, height: 360, backgroundColor: 'transparent' },
+  content: { padding: theme.spacing.gutterPanel, marginTop: -60, backgroundColor: theme.colors.background, borderTopLeftRadius: 30, borderTopRightRadius: 30 },
   categoryBadge: { fontFamily: theme.typography.labelSm.fontFamily, color: theme.colors.accentFocus, textTransform: 'uppercase', marginBottom: 8, letterSpacing: 1 },
   title: { fontFamily: theme.typography.displayLg.fontFamily, fontSize: 36, color: theme.colors.primary, lineHeight: 40, marginBottom: 24 },
   metaRow: { flexDirection: 'row', gap: 16, marginBottom: 32 },

@@ -29,6 +29,11 @@
       "expo-sqlite",
       "expo-font",
       "expo-image"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "8ca716ec-70c4-4529-8666-abc6f5b7ad4c"
+      }
+    }
   }
 }

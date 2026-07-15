@@ -139,6 +139,6 @@ const styles = StyleSheet.create({
   adjBtn: { padding: 8, paddingHorizontal: 16 },
   adjText: { fontSize: 18, fontFamily: theme.typography.headlineMd.fontFamily, color: theme.colors.primary },
   adjVal: { fontFamily: theme.typography.bodyMd.fontFamily, fontSize: 16, width: 30, textAlign: 'center' },
-  startBtn: { position: 'absolute', bottom: 24, left: 24, right: 24, backgroundColor: theme.colors.successGraph, padding: 16, borderRadius: 12, alignItems: 'center' },
+  startBtn: { position: 'absolute', bottom: 24, left: 24, right: 24, backgroundColor: theme.colors.accentFocus, padding: 16, borderRadius: 12, alignItems: 'center' },
   startBtnText: { color: '#fff', fontFamily: theme.typography.headlineMd.fontFamily, fontSize: 18 }
 });
