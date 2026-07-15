@@ -21,7 +21,6 @@
   <img src="docs/Img3.jpeg" width="200" style="margin: 10px;"/>
   <img src="docs/Img1.jpeg" width="200" style="margin: 10px;"/>
   <img src="docs/Img2.jpeg" width="200" style="margin: 10px;"/>
-  <img src="docs/Img4.jpeg" width="200" style="margin: 10px;"/>
 
 </div>
 
