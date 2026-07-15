@@ -10,7 +10,7 @@
   [![SQLite](https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
   [![Gemini](https://img.shields.io/badge/Gemini_AI-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://deepmind.google/technologies/gemini/)
 
-  *Gymini (Gym + Gemini) leverages Google's Gemini AI and an 800+ exercise offline database to generate perfect, science-backed workout routines tailored exactly to your equipment, goals, and schedule.*
+  *Gymini leverages Google's Gemini AI and an 800+ exercise offline database to generate perfect, science-backed workout routines tailored exactly to your equipment, goals, and schedule.*
 </div>
 
 ---
