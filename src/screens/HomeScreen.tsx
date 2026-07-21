@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Dimensions, Animated, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Dimensions, Animated, Alert, PanResponder } from 'react-native';
+import { Image } from 'expo-image';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCallback } from 'react';
 import { useSQLiteContext } from 'expo-sqlite';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -22,7 +24,13 @@ const DayCard = ({ dayShort, fullDay, isSelected, onPress }: any) => {
   }, [isSelected]);
 
   return (
-    <Pressable onPress={onPress} style={{ alignItems: 'center', marginHorizontal: 8 }}>
+    <Pressable 
+      onPress={onPress} 
+      style={{ alignItems: 'center', marginHorizontal: 8 }}
+      accessibilityRole="button"
+      accessibilityLabel={fullDay}
+      accessibilityState={{ selected: isSelected }}
+    >
       <Animated.View style={[styles.dayCard, isSelected && styles.dayCardActive, { transform: [{ scale }] }]}>
         <Text style={[styles.dayCardText, isSelected && styles.dayCardTextActive]}>{dayShort}</Text>
       </Animated.View>
@@ -33,11 +41,49 @@ const DayCard = ({ dayShort, fullDay, isSelected, onPress }: any) => {
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
   const db = useSQLiteContext();
+  const insets = useSafeAreaInsets();
   
   const todayIdx = new Date().getDay();
   const [selectedDayIndex, setSelectedDayIndex] = useState(todayIdx);
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
   const flipAnim = useRef(new Animated.Value(0)).current;
+
+  const rollingDays = React.useMemo(() => {
+    const indices = [];
+    for (let i = 0; i < 7; i++) {
+      indices.push((todayIdx + i) % 7);
+    }
+    return indices;
+  }, [todayIdx]);
+
+  const selectedDayIndexRef = useRef(selectedDayIndex);
+  useEffect(() => {
+    selectedDayIndexRef.current = selectedDayIndex;
+  }, [selectedDayIndex]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        // Claim the gesture if it's distinctly a horizontal swipe
+        return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && Math.abs(gestureState.dx) > 10;
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        const currentRollingIndex = rollingDays.indexOf(selectedDayIndexRef.current);
+        if (gestureState.dx > 40) {
+          // Swipe right -> previous day
+          let nextIdx = currentRollingIndex - 1;
+          if (nextIdx < 0) nextIdx = 6;
+          setSelectedDayIndex(rollingDays[nextIdx]);
+        } else if (gestureState.dx < -40) {
+          // Swipe left -> next day
+          let nextIdx = currentRollingIndex + 1;
+          if (nextIdx > 6) nextIdx = 0;
+          setSelectedDayIndex(rollingDays[nextIdx]);
+        }
+      }
+    })
+  ).current;
 
   const loadSchedule = async (dayIdx: number) => {
     try {
@@ -49,6 +95,9 @@ export default function HomeScreen() {
         ORDER BY s.id DESC LIMIT 1
       `;
       const result = await db.getFirstAsync<any>(query, [dayIdx]);
+      if (result && dayIdx !== todayIdx) {
+        result.is_completed = 0;
+      }
       setSelectedPlan(result);
     } catch (e) {
       console.error("Failed to load schedule", e);
@@ -91,7 +140,7 @@ export default function HomeScreen() {
       toValue: nextGlasses / maxGlasses,
       friction: 8,
       tension: 50,
-      useNativeDriver: false
+      useNativeDriver: true
     }).start();
   };
 
@@ -119,6 +168,19 @@ export default function HomeScreen() {
       loadSchedule(selectedDayIndex);
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleWaterUndo = () => {
+    if (glasses > 0) {
+      const nextGlasses = glasses - 1;
+      setGlasses(nextGlasses);
+      Animated.spring(waterHeightAnim, {
+        toValue: nextGlasses / maxGlasses,
+        friction: 8,
+        tension: 50,
+        useNativeDriver: true
+      }).start();
     }
   };
 
@@ -187,7 +249,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 64), paddingBottom: Math.max(insets.bottom + 80, 120) }]}>
         
         <View style={styles.header}>
           <Text style={styles.greeting}>{greeting}, Athlete</Text>
@@ -195,13 +257,13 @@ export default function HomeScreen() {
 
         <View style={{ marginBottom: 24 }}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, paddingHorizontal: 4 }}>
-            {dayNames.map((d, i) => (
+            {rollingDays.map((dayIdx) => (
               <DayCard 
-                key={i} 
-                dayShort={dayShorts[i]} 
-                fullDay={d} 
-                isSelected={selectedDayIndex === i} 
-                onPress={() => setSelectedDayIndex(i)} 
+                key={dayIdx} 
+                dayShort={dayShorts[dayIdx]} 
+                fullDay={dayNames[dayIdx]} 
+                isSelected={selectedDayIndex === dayIdx} 
+                onPress={() => setSelectedDayIndex(dayIdx)} 
               />
             ))}
           </ScrollView>
@@ -209,7 +271,10 @@ export default function HomeScreen() {
 
         <Text style={styles.sectionLabel}>{selectedDayIndex === todayIdx ? "TODAY'S FOCUS" : `${dayNames[selectedDayIndex].toUpperCase()}'S FOCUS`}</Text>
         
-        <View style={{ marginBottom: 32 }}>
+        <View 
+          style={{ marginBottom: 32 }}
+          {...panResponder.panHandlers}
+        >
           {selectedPlan ? (
             <>
               {/* Front Card */}
@@ -236,13 +301,13 @@ export default function HomeScreen() {
                 </Pressable>
 
                 {!selectedPlan.is_completed && selectedPlan.title !== 'Rest Day' && (
-                  <Pressable style={styles.startBtn} onPress={() => navigation.navigate('WorkoutDetail', { plan: { ...selectedPlan, exercises: JSON.parse(selectedPlan.exercises_json) } })}>
+                  <Pressable style={styles.startBtn} onPress={() => navigation.navigate('WorkoutDetail', { plan: { ...selectedPlan, exercises: JSON.parse(selectedPlan.exercises_json) } })} accessibilityRole="button" accessibilityLabel="Start Session">
                     <Text style={styles.startBtnText}>START SESSION</Text>
                   </Pressable>
                 )}
 
                 {!selectedPlan.is_completed && (
-                  <Pressable style={styles.plusBtn} onPress={handlePlusPress}>
+                  <Pressable style={styles.plusBtn} onPress={handlePlusPress} accessibilityRole="button" accessibilityLabel="Add workout or plan">
                     <MaterialIcons name="add" size={24} color={theme.colors.primary} />
                   </Pressable>
                 )}
@@ -265,13 +330,13 @@ export default function HomeScreen() {
                <MaterialIcons name="event-available" size={48} color={theme.colors.borderSubtle} style={{ marginBottom: 16 }} />
                <Text style={styles.emptyTitle}>Nothing Scheduled</Text>
                <View style={{ width: '100%', gap: 12, marginTop: 24 }}>
-                 <Pressable style={styles.outlineBtn} onPress={() => navigation.navigate('Library', { assignToDay: selectedDayIndex })}>
+                 <Pressable style={styles.outlineBtn} onPress={() => navigation.navigate('Library', { assignToDay: selectedDayIndex })} accessibilityRole="button" accessibilityLabel="Add a workout">
                    <Text style={styles.outlineBtnText}>Add a Workout</Text>
                  </Pressable>
-                 <Pressable style={styles.outlineBtn} onPress={() => navigation.navigate('SavedPlans', { assignToDay: selectedDayIndex })}>
+                 <Pressable style={styles.outlineBtn} onPress={() => navigation.navigate('SavedPlans', { assignToDay: selectedDayIndex })} accessibilityRole="button" accessibilityLabel="Add a plan">
                    <Text style={styles.outlineBtnText}>Add a Plan</Text>
                  </Pressable>
-                 <Pressable style={styles.outlineBtn} onPress={makeRestDay}>
+                 <Pressable style={styles.outlineBtn} onPress={makeRestDay} accessibilityRole="button" accessibilityLabel="Make it a rest day">
                    <Text style={styles.outlineBtnText}>Make it a Rest Day</Text>
                  </Pressable>
                </View>
@@ -283,14 +348,21 @@ export default function HomeScreen() {
           {/* Hydration Card */}
           <View style={[styles.hydrationCol, { flex: 1 }]}>
             <Text style={styles.sectionLabel}>DAILY HYDRATION</Text>
-            <Pressable style={[styles.hydrationCard, { flex: 1 }]} onPress={handleWaterClick}>
+            <Pressable style={[styles.hydrationCard, { flex: 1, overflow: 'hidden' }]} onPress={handleWaterClick} onLongPress={handleWaterUndo} accessibilityRole="button" accessibilityLabel={`Hydration: ${glasses} out of ${maxGlasses} glasses`}>
               <View style={styles.glassContainer}>
-                <Animated.View style={[styles.waterFill, { height: waterHeightAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 128] }) }]} />
+                <Animated.View style={[styles.waterFill, { height: 128, bottom: 0, position: 'absolute', width: '100%', transform: [{ translateY: waterHeightAnim.interpolate({ inputRange: [0, 1], outputRange: [128, 0] }) }] }]} />
                 <View style={styles.glassShine} />
               </View>
               <View style={{ alignItems: 'center' }}>
-                <Text style={styles.hydrationCount}>{glasses} / {maxGlasses}</Text>
-                <Text style={styles.hydrationUnit}>GLASSES</Text>
+                <Text style={[styles.hydrationCount, { color: glasses > 0 ? theme.colors.onPrimary : theme.colors.primary }]}>
+                  {glasses}
+                </Text>
+                <Text style={[styles.hydrationUnit, { color: glasses > 0 ? theme.colors.surfaceMuted : theme.colors.secondary }]}>
+                  GLASSES
+                </Text>
+                <Text style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 9, opacity: 0.6, marginTop: 12, letterSpacing: 0.5, color: glasses > 0 ? theme.colors.surfaceMuted : theme.colors.secondary }}>
+                  TAP TO ADD • HOLD TO UNDO
+                </Text>
               </View>
             </Pressable>
           </View>
@@ -355,32 +427,17 @@ export default function HomeScreen() {
 
       </ScrollView>
 
-      <Pressable style={styles.fab} onPress={() => navigation.navigate('Builder')}>
+      <Pressable style={styles.fab} onPress={() => navigation.navigate('Builder')} accessibilityRole="button" accessibilityLabel="Ask AI">
         <MaterialIcons name="smart-toy" size={20} color={theme.colors.onPrimary} />
         <Text style={styles.fabText}>Ask AI</Text>
       </Pressable>
-
-      <View style={styles.bottomNav}>
-        <Pressable style={styles.navItem} onPress={() => {}}>
-          <MaterialIcons name="dashboard" size={24} color={theme.colors.primary} style={{ marginBottom: 4 }} />
-          <Text style={[styles.navText, { color: theme.colors.primary }]}>Dashboard</Text>
-        </Pressable>
-        <Pressable style={styles.navItem} onPress={() => navigation.navigate('Library')}>
-          <MaterialIcons name="menu-book" size={24} color={theme.colors.secondary} style={{ marginBottom: 4 }} />
-          <Text style={styles.navText}>Library</Text>
-        </Pressable>
-        <Pressable style={styles.navItem} onPress={() => navigation.navigate('SavedPlans')}>
-          <MaterialIcons name="history" size={24} color={theme.colors.secondary} style={{ marginBottom: 4 }} />
-          <Text style={styles.navText}>My Plans</Text>
-        </Pressable>
-      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f7ebd6" },
-  content: { padding: theme.spacing.marginPage, paddingTop: 64, paddingBottom: 120 },
+  container: { flex: 1, backgroundColor: theme.colors.background },
+  content: { padding: theme.spacing.marginPage, maxWidth: 800, width: '100%', alignSelf: 'center' },
   header: { marginBottom: 16 },
   greeting: { fontFamily: 'Unbounded_700Bold', fontSize: 40, color: theme.colors.primary, lineHeight: 48, letterSpacing: -0.5 },
   
@@ -390,7 +447,7 @@ const styles = StyleSheet.create({
   dayCardTextActive: { color: theme.colors.onPrimary },
 
   sectionLabel: { fontFamily: theme.typography.labelSm.fontFamily, color: theme.colors.secondary, fontSize: 11, letterSpacing: 1.5, marginBottom: 12, textTransform: 'uppercase' },
-  focusCard: { backgroundColor: '#F8F5F0', borderWidth: 2, borderColor: theme.colors.primary, borderRadius: 12, padding: 24, marginBottom: 32, overflow: 'hidden' },
+  focusCard: { backgroundColor: theme.colors.customLinen, borderWidth: 2, borderColor: theme.colors.primary, borderRadius: 12, padding: 24, marginBottom: 32, overflow: 'hidden' },
   focusCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, zIndex: 10 },
   focusDate: { fontFamily: theme.typography.labelMd.fontFamily, color: theme.colors.secondary, marginBottom: 4 },
   focusTitle: { fontFamily: 'Unbounded_700Bold', fontSize: 24, color: theme.colors.primary },
@@ -420,10 +477,7 @@ const styles = StyleSheet.create({
   recentTitle: { fontFamily: 'Unbounded_700Bold', fontSize: 15, color: '#26211D' },
   recentSub: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 11, color: theme.colors.secondary, marginTop: 4 },
   fab: { position: 'absolute', bottom: 100, right: 24, backgroundColor: theme.colors.primary, paddingHorizontal: 24, paddingVertical: 16, borderRadius: 32, flexDirection: 'row', alignItems: 'center', gap: 8, elevation: 6 },
-  fabText: { color: theme.colors.onPrimary, fontFamily: theme.typography.labelMd.fontFamily, fontSize: 16 },
-  bottomNav: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 80, backgroundColor: theme.colors.surface, borderTopWidth: 1, borderColor: theme.colors.borderSubtle, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', paddingBottom: 20 },
-  navItem: { alignItems: 'center', justifyContent: 'center', flex: 1 },
-  navText: { fontFamily: theme.typography.labelSm.fontFamily, fontSize: 11, color: theme.colors.secondary }
+  fabText: { color: theme.colors.onPrimary, fontFamily: theme.typography.labelMd.fontFamily, fontSize: 16 }
 });
 
 // End of file

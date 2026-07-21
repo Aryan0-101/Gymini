@@ -1,30 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, TextInput, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, TextInput, Image, Dimensions, KeyboardAvoidingView, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSQLiteContext } from 'expo-sqlite';
 import { MaterialIcons } from '@expo/vector-icons';
 import { CONFIG } from '../config';
 import Svg, { Circle } from 'react-native-svg';
+import { theme } from '../theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
-
-const stheme = {
-  colors: {
-    ink: "#26211D",
-    sand: "#F2E9D8",
-    linen: "#FAF5EA",
-    ember: "#E2725A",
-    mochaGhost: "#8b7355",
-    inkLighter: "#3A332E",
-    inkLightest: "#4F4640",
-    successGraph: "#38A169"
-  }
-};
 
 export default function ActiveSessionScreen({ route }: any) {
   const { workout } = route.params;
   const db = useSQLiteContext();
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
 
   const [currentExIdx, setCurrentExIdx] = useState(0);
   const currentEx = workout.exercises[currentExIdx];
@@ -92,12 +82,34 @@ export default function ActiveSessionScreen({ route }: any) {
     }
   };
 
+  const handleUndoSet = (idx: number) => {
+    setCompletedSets(prev => prev.filter(i => i !== idx));
+    setActiveSetIdx(idx);
+    if (setLogs[idx]) {
+      setWeightInput(setLogs[idx].weight);
+      setRepsInput(setLogs[idx].reps);
+    }
+  };
+
   const handleCompleteSet = () => {
     setSetLogs(prev => ({ ...prev, [activeSetIdx]: { weight: weightInput, reps: repsInput } }));
-    setCompletedSets(prev => [...prev, activeSetIdx]);
+    const newCompleted = [...completedSets, activeSetIdx];
+    setCompletedSets(newCompleted);
     
-    if (activeSetIdx < currentSetsCount - 1) {
-      setActiveSetIdx(activeSetIdx + 1);
+    // Find next uncompleted set
+    let nextUncompleted = -1;
+    for (let i = 0; i < currentSetsCount; i++) {
+      if (!newCompleted.includes(i)) {
+        nextUncompleted = i;
+        break;
+      }
+    }
+
+    if (nextUncompleted !== -1) {
+      setActiveSetIdx(nextUncompleted);
+      // Auto-fill the weight for the next set based on the completed one for convenience
+      setWeightInput(setLogs[nextUncompleted]?.weight || weightInput);
+      setRepsInput(setLogs[nextUncompleted]?.reps || currentEx?.reps?.toString().match(/\d+/)?.[0] || "");
     } else {
       // Last set completed! Move to next exercise if available, or finish
       if (currentExIdx < workout.exercises.length - 1) {
@@ -122,20 +134,24 @@ export default function ActiveSessionScreen({ route }: any) {
   try {
     const parsed = typeof currentEx.images === 'string' ? JSON.parse(currentEx.images) : currentEx.images;
     if (parsed && Array.isArray(parsed)) {
-      imageUrls = parsed.map((p: string) => `${CONFIG.ASSET_BASE_URL}/${p.replace(/\\/g, '/')}`);
+      imageUrls = parsed.map((p: string) => p.startsWith('http') ? p : `${CONFIG.ASSET_BASE_URL}/${p.replace(/\\/g, '/')}`);
     }
   } catch (e) {}
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 16) }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, flex: 1 }}>
-          <Pressable onPress={() => navigation.goBack()} style={styles.closeBtn}>
-            <MaterialIcons name="close" size={20} color={stheme.colors.sand} style={{ opacity: 0.7 }} />
+          <Pressable 
+            onPress={() => navigation.goBack()} 
+            style={styles.closeBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <MaterialIcons name="close" size={20} color={theme.colors.onPrimary} style={{ opacity: 0.7 }} />
           </Pressable>
           <View style={{ flex: 1, paddingRight: 8 }}>
-            <Text style={styles.headerTitle} numberOfLines={1}>{currentEx.name}</Text>
+            <Text style={styles.headerTitle} numberOfLines={2}>{currentEx.name}</Text>
             <Text style={styles.headerSub}>Working Sets • {currentExIdx + 1} of {workout.exercises.length}</Text>
           </View>
         </View>
@@ -144,13 +160,13 @@ export default function ActiveSessionScreen({ route }: any) {
         <Pressable style={styles.timerBadge} onPress={() => setIsTimerRunning(!isTimerRunning)}>
           <View style={{ width: 32, height: 32, position: 'relative' }}>
             <Svg width="32" height="32" viewBox="0 0 100 100" style={{ transform: [{ rotate: '-90deg' }] }}>
-              <Circle cx="50" cy="50" r="45" fill="none" stroke={stheme.colors.inkLightest} strokeWidth="8" />
+              <Circle cx="50" cy="50" r="45" fill="none" stroke={theme.colors.borderSubtle} strokeWidth="8" />
               {isTimerRunning && (
-                <Circle cx="50" cy="50" r="45" fill="none" stroke={stheme.colors.ember} strokeWidth="8" strokeDasharray="283" strokeDashoffset={283 - (sessionTimer % 60) * (283 / 60)} strokeLinecap="round" />
+                <Circle cx="50" cy="50" r="45" fill="none" stroke={theme.colors.accentFocus} strokeWidth="8" strokeDasharray="283" strokeDashoffset={283 - (sessionTimer % 60) * (283 / 60)} strokeLinecap="round" />
               )}
             </Svg>
             <View style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center' }}>
-              <MaterialIcons name={isTimerRunning ? "timer" : "pause"} size={16} color={isTimerRunning ? stheme.colors.ember : stheme.colors.sand} />
+              <MaterialIcons name={isTimerRunning ? "timer" : "pause"} size={16} color={isTimerRunning ? theme.colors.accentFocus : theme.colors.onPrimary} />
             </View>
           </View>
           <Text style={styles.timerText}>
@@ -191,7 +207,7 @@ export default function ActiveSessionScreen({ route }: any) {
 
             if (isCompleted) {
               return (
-                <View key={i} style={styles.completedSetRow}>
+                <Pressable key={i} style={styles.completedSetRow} onPress={() => handleUndoSet(i)}>
                   <View style={styles.completedSetBadge}>
                     <Text style={styles.completedSetNum}>{i + 1}</Text>
                   </View>
@@ -208,9 +224,9 @@ export default function ActiveSessionScreen({ route }: any) {
                     </View>
                   </View>
                   <View style={{ position: 'absolute', right: 16 }}>
-                    <MaterialIcons name="check-circle" size={24} color={stheme.colors.successGraph} />
+                    <MaterialIcons name="edit" size={24} color={theme.colors.onPrimary} style={{ opacity: 0.5 }} />
                   </View>
-                </View>
+                </Pressable>
               );
             }
 
@@ -278,11 +294,11 @@ export default function ActiveSessionScreen({ route }: any) {
         </View>
 
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 16 }}>
-          <Pressable onPress={() => setCurrentSetsCount(Math.max(1, currentSetsCount - 1))} style={{ paddingVertical: 12, paddingHorizontal: 24, borderWidth: 1, borderColor: stheme.colors.inkLightest, borderRadius: 8 }}>
-            <Text style={{ fontFamily: 'JetBrainsMono_500Medium', color: stheme.colors.sand, fontSize: 12 }}>- REMOVE SET</Text>
+          <Pressable onPress={() => setCurrentSetsCount(Math.max(1, currentSetsCount - 1))} style={{ paddingVertical: 12, paddingHorizontal: 24, borderWidth: 1, borderColor: theme.colors.borderSubtle, borderRadius: 8 }}>
+            <Text style={{ fontFamily: 'JetBrainsMono_500Medium', color: theme.colors.onPrimary, fontSize: 12 }}>- REMOVE SET</Text>
           </Pressable>
-          <Pressable onPress={() => setCurrentSetsCount(currentSetsCount + 1)} style={{ paddingVertical: 12, paddingHorizontal: 24, borderWidth: 1, borderColor: stheme.colors.inkLightest, borderRadius: 8 }}>
-            <Text style={{ fontFamily: 'JetBrainsMono_500Medium', color: stheme.colors.sand, fontSize: 12 }}>+ ADD SET</Text>
+          <Pressable onPress={() => setCurrentSetsCount(currentSetsCount + 1)} style={{ paddingVertical: 12, paddingHorizontal: 24, borderWidth: 1, borderColor: theme.colors.borderSubtle, borderRadius: 8 }}>
+            <Text style={{ fontFamily: 'JetBrainsMono_500Medium', color: theme.colors.onPrimary, fontSize: 12 }}>+ ADD SET</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -318,7 +334,7 @@ export default function ActiveSessionScreen({ route }: any) {
                   {thumbUrl ? (
                     <Image source={{ uri: thumbUrl }} style={{ width: '100%', height: '100%' }} />
                   ) : (
-                    <MaterialIcons name="fitness-center" size={20} color={stheme.colors.inkLightest} />
+                    <MaterialIcons name="fitness-center" size={20} color={theme.colors.borderSubtle} />
                   )}
                 </View>
                 <View style={{ flex: 1 }}>
@@ -333,30 +349,30 @@ export default function ActiveSessionScreen({ route }: any) {
           </Pressable>
         </ScrollView>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: stheme.colors.ink },
+  container: { flex: 1, backgroundColor: theme.colors.primary, maxWidth: 600, alignSelf: 'center', width: '100%' },
   header: { 
-    paddingTop: 60, paddingHorizontal: 24, height: 120, 
-    backgroundColor: 'rgba(38, 33, 29, 0.9)', borderBottomWidth: 1, borderColor: stheme.colors.inkLighter, 
+    paddingHorizontal: 24, paddingBottom: 16, 
+    backgroundColor: 'rgba(38, 33, 29, 0.9)', borderBottomWidth: 1, borderColor: theme.colors.surfaceMuted, 
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 50 
   },
-  closeBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: stheme.colors.inkLighter, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontFamily: 'Unbounded_600SemiBold', fontSize: 20, color: stheme.colors.linen },
+  closeBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: theme.colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontFamily: 'Unbounded_600SemiBold', fontSize: 20, color: theme.colors.onPrimary },
   headerSub: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 12, color: 'rgba(242, 233, 216, 0.6)', marginTop: 4, letterSpacing: 1.5 },
-  timerBadge: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: stheme.colors.inkLighter, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 32, borderWidth: 1, borderColor: stheme.colors.inkLightest },
-  timerText: { fontFamily: 'IBM Plex Mono', fontSize: 14, color: stheme.colors.linen, width: 48, textAlign: 'center' },
+  timerBadge: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: theme.colors.surfaceMuted, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 32, borderWidth: 1, borderColor: theme.colors.borderSubtle },
+  timerText: { fontFamily: 'IBM Plex Mono', fontSize: 14, color: theme.colors.onPrimary, width: 48, textAlign: 'center' },
   
   content: { paddingHorizontal: 24, paddingTop: 32, paddingBottom: 200 },
-  heroImageContainer: { height: 200, width: '100%', borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: stheme.colors.inkLightest, marginBottom: 32, backgroundColor: stheme.colors.inkLighter },
+  heroImageContainer: { height: 200, width: '100%', borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: theme.colors.borderSubtle, marginBottom: 32, backgroundColor: theme.colors.surfaceMuted },
   heroImage: { width: '100%', height: '100%', opacity: 0.8 },
   heroOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16 },
-  heroTag: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 10, color: stheme.colors.ember, letterSpacing: 2 },
+  heroTag: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 10, color: theme.colors.accentFocus, letterSpacing: 2 },
   
-  tableHeader: { flexDirection: 'row', borderBottomWidth: 1, borderColor: stheme.colors.inkLighter, paddingBottom: 8, marginBottom: 16, paddingHorizontal: 16 },
+  tableHeader: { flexDirection: 'row', borderBottomWidth: 1, borderColor: theme.colors.surfaceMuted, paddingBottom: 8, marginBottom: 16, paddingHorizontal: 16 },
   th: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 12, color: 'rgba(242, 233, 216, 0.6)', letterSpacing: 1 },
   
   // Set Rows
@@ -366,41 +382,41 @@ const styles = StyleSheet.create({
   prevValSub: { fontFamily: 'Inter_400Regular', fontSize: 12, color: 'rgba(242, 233, 216, 0.5)' },
   targetValSm: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 12, color: 'rgba(242, 233, 216, 0.6)', marginTop: 4 },
 
-  completedSetRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: stheme.colors.inkLighter, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: stheme.colors.inkLightest, opacity: 0.8 },
-  completedSetBadge: { width: 48, height: 48, borderRadius: 24, backgroundColor: stheme.colors.inkLightest, alignItems: 'center', justifyContent: 'center' },
-  completedSetNum: { fontFamily: 'Unbounded_500Medium', fontSize: 18, color: stheme.colors.linen },
+  completedSetRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.surfaceMuted, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: theme.colors.borderSubtle, opacity: 0.8 },
+  completedSetBadge: { width: 48, height: 48, borderRadius: 24, backgroundColor: theme.colors.borderSubtle, alignItems: 'center', justifyContent: 'center' },
+  completedSetNum: { fontFamily: 'Unbounded_500Medium', fontSize: 18, color: theme.colors.onPrimary },
   targetColCompleted: { flex: 2, flexDirection: 'row', justifyContent: 'flex-end', gap: 32, paddingRight: 16 },
-  targetValLg: { fontFamily: 'IBM Plex Mono', fontSize: 20, color: stheme.colors.linen },
+  targetValLg: { fontFamily: 'IBM Plex Mono', fontSize: 20, color: theme.colors.onPrimary },
 
-  activeSetRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: stheme.colors.inkLighter, borderRadius: 12, padding: 24, borderLeftWidth: 4, borderLeftColor: stheme.colors.ember, borderWidth: 1, borderColor: stheme.colors.inkLightest, transform: [{ scale: 1.02 }], shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 },
-  activeSetBadge: { width: 56, height: 56, borderRadius: 12, backgroundColor: stheme.colors.ink, borderWidth: 1, borderColor: 'rgba(226, 114, 90, 0.5)', alignItems: 'center', justifyContent: 'center' },
-  activeSetNum: { fontFamily: 'Unbounded_500Medium', fontSize: 20, color: stheme.colors.ember },
+  activeSetRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.surfaceMuted, borderRadius: 12, padding: 24, borderLeftWidth: 4, borderLeftColor: theme.colors.accentFocus, borderWidth: 1, borderColor: theme.colors.borderSubtle, transform: [{ scale: 1.02 }], shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 },
+  activeSetBadge: { width: 56, height: 56, borderRadius: 12, backgroundColor: theme.colors.primary, borderWidth: 1, borderColor: 'rgba(226, 114, 90, 0.5)', alignItems: 'center', justifyContent: 'center' },
+  activeSetNum: { fontFamily: 'Unbounded_500Medium', fontSize: 20, color: theme.colors.accentFocus },
   targetColActive: { flex: 2, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 24, paddingRight: 8 },
   inputWrapper: { alignItems: 'center' },
-  weightRepInput: { fontFamily: 'IBM Plex Mono', fontSize: 32, color: stheme.colors.linen, textAlign: 'center', borderBottomWidth: 2, borderBottomColor: stheme.colors.inkLightest, minWidth: 64, paddingBottom: 4 },
-  inputLabelActive: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 12, color: stheme.colors.ember, marginTop: 8, letterSpacing: 1 },
-  inputDivider: { width: 1, height: 40, backgroundColor: stheme.colors.inkLightest },
-  activeIndicator: { width: 32, height: 1, backgroundColor: stheme.colors.ember, marginTop: 12 },
+  weightRepInput: { fontFamily: 'IBM Plex Mono', fontSize: 32, color: theme.colors.onPrimary, textAlign: 'center', borderBottomWidth: 2, borderBottomColor: theme.colors.borderSubtle, minWidth: 64, paddingBottom: 4 },
+  inputLabelActive: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 12, color: theme.colors.accentFocus, marginTop: 8, letterSpacing: 1 },
+  inputDivider: { width: 1, height: 40, backgroundColor: theme.colors.borderSubtle },
+  activeIndicator: { width: 32, height: 1, backgroundColor: theme.colors.accentFocus, marginTop: 12 },
 
-  upcomingSetRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(38, 33, 29, 0.5)', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: stheme.colors.inkLightest, borderStyle: 'dashed' },
-  upcomingSetBadge: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, borderColor: stheme.colors.inkLightest, alignItems: 'center', justifyContent: 'center' },
+  upcomingSetRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(38, 33, 29, 0.5)', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: theme.colors.borderSubtle, borderStyle: 'dashed' },
+  upcomingSetBadge: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, borderColor: theme.colors.borderSubtle, alignItems: 'center', justifyContent: 'center' },
   upcomingSetNum: { fontFamily: 'Unbounded_500Medium', fontSize: 18, color: 'rgba(242, 233, 216, 0.6)' },
   targetColUpcoming: { flex: 2, flexDirection: 'row', justifyContent: 'flex-end', gap: 32, paddingRight: 16 },
   targetValUpcomingLg: { fontFamily: 'IBM Plex Mono', fontSize: 20, color: 'rgba(242, 233, 216, 0.8)' },
 
   // FABs
   fabContainer: { position: 'absolute', bottom: 130, right: 24, zIndex: 50, alignItems: 'center' },
-  restFab: { width: 56, height: 56, marginBottom: 16, backgroundColor: stheme.colors.inkLighter, borderWidth: 1, borderColor: stheme.colors.inkLightest, borderRadius: 12, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 4 },
+  restFab: { width: 56, height: 56, marginBottom: 16, backgroundColor: theme.colors.surfaceMuted, borderWidth: 1, borderColor: theme.colors.borderSubtle, borderRadius: 12, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 4 },
   restFabText: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 8, color: 'rgba(242, 233, 216, 0.8)', letterSpacing: 0.5, marginTop: 2 },
-  completeFab: { width: 80, height: 80, backgroundColor: stheme.colors.ember, borderRadius: 16, alignItems: 'center', justifyContent: 'center', shadowColor: stheme.colors.ember, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.4, shadowRadius: 25, elevation: 10 },
+  completeFab: { width: 80, height: 80, backgroundColor: theme.colors.accentFocus, borderRadius: 16, alignItems: 'center', justifyContent: 'center', shadowColor: theme.colors.accentFocus, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.4, shadowRadius: 25, elevation: 10 },
 
   // Footer
-  footer: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 112, backgroundColor: stheme.colors.inkLighter, borderTopWidth: 1, borderColor: stheme.colors.inkLightest, zIndex: 40, paddingHorizontal: 24, paddingVertical: 12 },
+  footer: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 112, backgroundColor: theme.colors.surfaceMuted, borderTopWidth: 1, borderColor: theme.colors.borderSubtle, zIndex: 40, paddingHorizontal: 24, paddingVertical: 12 },
   footerTitle: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 12, color: 'rgba(242, 233, 216, 0.6)', letterSpacing: 1 },
   footerSub: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 12, color: 'rgba(242, 233, 216, 0.6)' },
-  upcomingThumbnailRow: { width: 192, height: 56, backgroundColor: stheme.colors.ink, borderRadius: 8, borderWidth: 1, borderColor: stheme.colors.inkLightest, padding: 8, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  upcomingThumbnailRow: { width: 192, height: 56, backgroundColor: theme.colors.primary, borderRadius: 8, borderWidth: 1, borderColor: theme.colors.borderSubtle, padding: 8, flexDirection: 'row', alignItems: 'center', gap: 12 },
   thumbPlaceholder: { width: 40, height: 40, borderRadius: 4, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  thumbTitle: { fontFamily: 'Inter_400Regular', fontSize: 14, color: stheme.colors.linen, maxWidth: 100 },
+  thumbTitle: { fontFamily: 'Inter_400Regular', fontSize: 14, color: theme.colors.onPrimary, maxWidth: 100 },
   thumbSub: { fontFamily: 'IBM Plex Mono', fontSize: 12, color: 'rgba(242, 233, 216, 0.6)' },
-  addExerciseThumb: { width: 56, height: 56, backgroundColor: 'rgba(38, 33, 29, 0.5)', borderRadius: 8, borderWidth: 1, borderColor: stheme.colors.inkLightest, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' }
+  addExerciseThumb: { width: 56, height: 56, backgroundColor: 'rgba(38, 33, 29, 0.5)', borderRadius: 8, borderWidth: 1, borderColor: theme.colors.borderSubtle, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' }
 });

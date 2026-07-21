@@ -22,6 +22,10 @@ export default function AgentBuilderScreen() {
           if (row.messages_json) setMessages(JSON.parse(row.messages_json));
           if (row.workout_json) setWorkout(JSON.parse(row.workout_json));
         }
+        
+        if (!row || !row.messages_json || JSON.parse(row.messages_json).length === 0) {
+          setMessages([{ role: 'ai', text: "Hi, I'm Gymini. What do you want to train today? Let me know your available time, equipment, or focus area." }]);
+        }
       } catch (e) {
         console.error("Could not load AI chat session", e);
       }
@@ -46,7 +50,7 @@ export default function AgentBuilderScreen() {
   }, [messages, workout, db]);
 
   const clearSession = () => {
-    setMessages([]);
+    setMessages([{ role: 'ai', text: "Hi, I'm Gymini. What do you want to train today? Let me know your available time, equipment, or focus area." }]);
     setWorkout(null);
     db.runAsync('DELETE FROM ai_chat_session WHERE id = 1').catch(console.error);
   };
@@ -247,22 +251,33 @@ export default function AgentBuilderScreen() {
               <MaterialIcons name="smart-toy" size={18} color={theme.colors.primary} />
             </View>
             <View style={styles.aiBubble}>
-               <ActivityIndicator color={theme.colors.primary} size="large" />
-               <Text style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 10, color: theme.colors.primary, textAlign: 'center', marginTop: 8, letterSpacing: 1.5 }}>BUILDING...</Text>
+               <ActivityIndicator color={theme.colors.accentFocus} size="large" />
+               <Text style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 10, color: theme.colors.accentFocus, textAlign: 'center', marginTop: 8, letterSpacing: 1.5 }}>SYNTHESIZING...</Text>
             </View>
           </View>
         )}
 
       </ScrollView>
 
+      {messages.length === 1 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16, gap: 8 }}>
+          {["Quick 15m Core", "Full Body Strength", "Dumbbell Leg Day"].map((sug, i) => (
+            <Pressable key={i} style={styles.suggestionChip} onPress={() => setPrompt(sug)}>
+              <Text style={styles.suggestionText}>{sug}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      )}
+
       <View style={styles.inputArea}>
         <TextInput
           style={styles.input}
           placeholder="Instruct the builder..."
-          placeholderTextColor="rgba(255,255,255,0.4)"
+          placeholderTextColor="rgba(38,33,29,0.4)"
           value={prompt}
           onChangeText={setPrompt}
           multiline={true}
+          maxLength={500}
         />
         <Pressable style={styles.sendBtn} onPress={handleGenerate} disabled={loading}>
           <MaterialIcons name="send" size={18} color="#fff" />
@@ -273,7 +288,7 @@ export default function AgentBuilderScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.primary }, // Ink background
+  container: { flex: 1, backgroundColor: theme.colors.primary, maxWidth: 600, alignSelf: 'center', width: '100%' }, 
   content: { padding: 16, paddingBottom: 40, gap: 24 },
   bubbleWrapper: { flexDirection: 'row', width: '100%' },
   userBubbleWrapper: { justifyContent: 'flex-end' },
@@ -286,21 +301,23 @@ const styles = StyleSheet.create({
   bubbleText: { fontFamily: theme.typography.bodyMd.fontFamily, fontSize: 16 },
   userBubbleText: { color: '#fff' }, // Linen text
   aiBubbleText: { color: theme.colors.primary }, // Ink text
-  planCard: { backgroundColor: '#F8F5F0', borderWidth: 1, borderColor: '#d6cfc7', borderRadius: 8, padding: 16, marginTop: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
-  planHeader: { borderBottomWidth: 1, borderColor: '#d6cfc7', paddingBottom: 8, marginBottom: 16 },
+  planCard: { backgroundColor: theme.colors.onPrimary, borderWidth: 1, borderColor: theme.colors.borderSubtle, borderRadius: 8, padding: 16, marginTop: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
+  planHeader: { borderBottomWidth: 1, borderColor: 'rgba(38, 33, 29, 0.1)', paddingBottom: 8, marginBottom: 16 },
   planTitle: { fontFamily: theme.typography.headlineMd.fontFamily, fontSize: 16, color: theme.colors.primary },
   planTable: { marginBottom: 16 },
-  tableRowHeader: { flexDirection: 'row', borderBottomWidth: 1, borderColor: '#EAE3DB', paddingBottom: 8, marginBottom: 8 },
-  th: { fontFamily: theme.typography.labelSm.fontFamily, fontSize: 10, color: '#736A62', letterSpacing: 1 },
-  tableRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderColor: '#EAE3DB' },
+  tableRowHeader: { flexDirection: 'row', borderBottomWidth: 1, borderColor: 'rgba(38, 33, 29, 0.1)', paddingBottom: 8, marginBottom: 8 },
+  th: { fontFamily: theme.typography.labelSm.fontFamily, fontSize: 10, color: 'rgba(38, 33, 29, 0.6)', letterSpacing: 1 },
+  tableRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderColor: 'rgba(38, 33, 29, 0.1)' },
   td: { fontSize: 14, color: theme.colors.primary },
   planActions: { flexDirection: 'row', gap: 8 },
   applyBtn: { flex: 1, backgroundColor: theme.colors.primary, paddingVertical: 12, borderRadius: 4, alignItems: 'center' },
   applyBtnText: { color: theme.colors.onPrimary, fontFamily: theme.typography.labelMd.fontFamily, fontSize: 13 },
   startBtn: { flex: 1, borderWidth: 1, borderColor: theme.colors.primary, paddingVertical: 12, borderRadius: 4, alignItems: 'center' },
   startBtnText: { color: theme.colors.primary, fontFamily: theme.typography.labelMd.fontFamily, fontSize: 13 },
-  inputArea: { padding: 16, backgroundColor: theme.colors.primary, borderTopWidth: 1, borderColor: '#3A332C', flexDirection: 'row', alignItems: 'center', gap: 12 },
-  input: { flex: 1, backgroundColor: '#1F1B18', borderWidth: 1, borderColor: '#3A332C', color: theme.colors.onPrimary, fontFamily: theme.typography.bodyMd.fontFamily, fontSize: 16, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 14, borderRadius: 24, minHeight: 52, maxHeight: 120 },
+  inputArea: { padding: 16, backgroundColor: theme.colors.primary, borderTopWidth: 1, borderColor: theme.colors.borderSubtle, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  input: { flex: 1, backgroundColor: theme.colors.surfaceMuted, borderWidth: 1, borderColor: theme.colors.borderSubtle, color: theme.colors.primary, fontFamily: theme.typography.bodyMd.fontFamily, fontSize: 16, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 14, borderRadius: 24, minHeight: 52, maxHeight: 120 },
   sendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: theme.colors.accentFocus, alignItems: 'center', justifyContent: 'center' },
-  sendBtnText: { color: '#fff', fontSize: 18 }
+  sendBtnText: { color: '#fff', fontSize: 18 },
+  suggestionChip: { paddingHorizontal: 16, paddingVertical: 10, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20, borderWidth: 1, borderColor: theme.colors.borderSubtle },
+  suggestionText: { color: theme.colors.onPrimary, fontFamily: theme.typography.labelMd.fontFamily, fontSize: 12 }
 });

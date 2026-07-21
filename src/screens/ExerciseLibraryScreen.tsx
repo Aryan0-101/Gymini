@@ -265,7 +265,7 @@ export default function ExerciseLibraryScreen({ route }: any) {
             })}
           </ScrollView>
           {expandedFilter && filterMap[expandedFilter] && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.filterScroll, { marginTop: 8 }]}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: theme.spacing.marginPage, marginTop: 12 }}>
               <Pressable 
                 style={[styles.subFilterBtn, !(activeSubFilters[expandedFilter]?.length > 0) && styles.subFilterBtnActive]}
                 onPress={clearSubFilters}
@@ -286,19 +286,26 @@ export default function ExerciseLibraryScreen({ route }: any) {
                   </Pressable>
                 );
               })}
-            </ScrollView>
+            </View>
           )}
         </View>
       </View>
 
       <View style={{ flex: 1, paddingHorizontal: theme.spacing.marginPage }}>
-        <TypedFlashList
-          data={filteredExercises}
-          renderItem={renderItem}
-          estimatedItemSize={250}
-          ItemSeparatorComponent={() => <View style={{ height: 24 }} />}
-          contentContainerStyle={{ padding: theme.spacing.gutterPanel, paddingBottom: 40 }}
-        />
+        {filteredExercises.length === 0 ? (
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', opacity: 0.5, paddingBottom: 100 }}>
+            <Text style={{ fontFamily: theme.typography.headlineMd.fontFamily, fontSize: 20, color: theme.colors.onPrimary, marginBottom: 8 }}>No exercises found</Text>
+            <Text style={{ fontFamily: theme.typography.bodyMd.fontFamily, color: theme.colors.secondary, textAlign: 'center' }}>Try adjusting your search or filters.</Text>
+          </View>
+        ) : (
+          <TypedFlashList
+            data={filteredExercises}
+            renderItem={renderItem}
+            estimatedItemSize={250}
+            ItemSeparatorComponent={() => <View style={{ height: 24 }} />}
+            contentContainerStyle={{ padding: theme.spacing.gutterPanel, paddingBottom: 40 }}
+          />
+        )}
       </View>
       <ExerciseActionModal 
         exercise={selectedExercise} 
@@ -319,10 +326,10 @@ const styles = StyleSheet.create({
   filterBtnActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
   filterText: { fontFamily: theme.typography.labelSm.fontFamily, color: theme.colors.secondary, textTransform: 'uppercase' },
   filterTextActive: { color: theme.colors.onPrimary },
-  subFilterBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: '#d6cfc7', backgroundColor: '#F8F5F0' },
+  subFilterBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: theme.colors.borderSubtle, backgroundColor: theme.colors.surfaceMuted },
   subFilterBtnActive: { backgroundColor: theme.colors.accentFocus, borderColor: theme.colors.accentFocus },
-  subFilterText: { fontFamily: theme.typography.labelSm.fontFamily, fontSize: 10, color: theme.colors.primary, textTransform: 'capitalize' },
-  subFilterTextActive: { color: '#fff' },
+  subFilterText: { fontFamily: theme.typography.labelSm.fontFamily, fontSize: 10, color: theme.colors.secondary, textTransform: 'capitalize' },
+  subFilterTextActive: { color: theme.colors.primary },
   card: { backgroundColor: theme.colors.primary, borderWidth: 1, borderColor: theme.colors.borderSubtle, borderRadius: theme.rounded.lg, overflow: 'hidden' },
   imageContainer: { width: '100%', height: 180, backgroundColor: theme.colors.surfaceMuted },
   image: { width: '100%', height: '100%', position: 'absolute' },
