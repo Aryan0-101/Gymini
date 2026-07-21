@@ -18,9 +18,9 @@
 ## 📱 Screenshots
 
 <div align="center">
-  <img src="docs/Img3.jpeg" width="200" style="margin: 10px;"/>
-  <img src="docs/Img1.jpeg" width="200" style="margin: 10px;"/>
-  <img src="docs/Img2.jpeg" width="200" style="margin: 10px;"/>
+  <img src="docs/Img3.png" width="200" style="margin: 10px;"/>
+  <img src="docs/Img1.png" width="200" style="margin: 10px;"/>
+  <img src="docs/Img2.png" width="200" style="margin: 10px;"/>
 
 </div>
 
@@ -44,7 +44,7 @@
 You don't need to compile the code to try Gymini! You can download the latest production APK directly.
 
 1. Go to the [Releases Tab](../../releases) on this repository.
-2. Download the latest `Gymini-v1.0.0.apk`.
+2. Download the latest `Gymini-v1.2.0.apk`.
 3. Open the file on your Android device to install!
 
 ---
@@ -97,7 +97,7 @@ Want to compile the app yourself or contribute? It's incredibly easy to get star
 
 ## 🙏 Acknowledgments & Data Sources
 
-The massive 800+ exercise database powering Gymini's offline library and AI matching engine was derived from the incredible open-source database [exercise.json](https://github.com/wrkout/exercises.json) by [OllieJennings](https://github.com/wrkout/exercises.json/commits?author=OllieJennings).
+The massive 1400+ exercise database powering Gymini's offline library and AI matching engine was derived from the incredible open-source database provider [AscendApi](https://ascendapi.com/).
 
 ## 📄 License
 
