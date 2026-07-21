@@ -28,7 +28,7 @@ export default function App() {
   }
 
   return (
-    <SQLiteProvider databaseName="gymx.db" assetSource={{ assetId: require('./assets/gymx.db') }}>
+    <SQLiteProvider databaseName="gymx_v2.db" assetSource={{ assetId: require('./assets/gymx_v2.db') }}>
       <DatabaseInitializer>
         <AppNavigator />
         <StatusBar style="auto" />

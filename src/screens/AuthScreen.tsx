@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Animated, SafeAreaView, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, StatusBar } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme';
 import { useNavigation } from '@react-navigation/native';
+import DuoButton from '../components/DuoButton';
 
 export default function AuthScreen() {
   const insets = useSafeAreaInsets();
@@ -48,26 +49,25 @@ export default function AuthScreen() {
           </View>
         </View>
 
-        <Pressable style={styles.startBtn} onPress={handleStart}>
-          <Text style={styles.startBtnText}>START TRAINING</Text>
-          <MaterialIcons name="arrow-forward" size={20} color={theme.colors.primary} />
-        </Pressable>
+        <DuoButton 
+          title="START TRAINING" 
+          color="primary" 
+          onPress={handleStart} 
+        />
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.primary, maxWidth: 600, alignSelf: 'center', width: '100%' },
+  container: { flex: 1, backgroundColor: theme.colors.background, maxWidth: 600, alignSelf: 'center', width: '100%' },
   content: { flex: 1, justifyContent: 'center', padding: 32 },
-  logoBox: { width: 80, height: 80, borderRadius: 24, backgroundColor: 'rgba(226, 114, 90, 0.1)', borderWidth: 1, borderColor: 'rgba(226, 114, 90, 0.3)', alignItems: 'center', justifyContent: 'center', marginBottom: 32 },
-  title: { fontFamily: 'Unbounded_700Bold', fontSize: 48, color: theme.colors.onPrimary, letterSpacing: -1, marginBottom: 16 },
-  subtitle: { fontFamily: 'Inter_400Regular', fontSize: 18, color: theme.colors.secondary, lineHeight: 26, marginBottom: 48 },
+  logoBox: { width: 80, height: 80, borderRadius: 24, backgroundColor: theme.colors.surfaceMuted, borderWidth: 2, borderBottomWidth: 4, borderColor: theme.colors.borderSubtle, alignItems: 'center', justifyContent: 'center', marginBottom: 32 },
+  title: { fontFamily: 'Unbounded_700Bold', fontSize: 48, color: theme.colors.primary, letterSpacing: -1, marginBottom: 16 },
+  subtitle: { fontFamily: 'Inter_400Regular', fontSize: 18, color: theme.colors.onSurfaceVariant, lineHeight: 26, marginBottom: 48 },
   features: { gap: 24, marginBottom: 48 },
   featureRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 16 },
-  featureIconBox: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(250, 245, 234, 0.05)', alignItems: 'center', justifyContent: 'center' },
-  featureTitle: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 14, color: theme.colors.onPrimary, marginBottom: 4, letterSpacing: 0.5 },
-  featureDesc: { fontFamily: 'Inter_400Regular', fontSize: 14, color: theme.colors.secondary },
-  startBtn: { backgroundColor: theme.colors.accentFocus, paddingVertical: 20, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12 },
-  startBtnText: { fontFamily: 'Unbounded_600SemiBold', fontSize: 16, color: theme.colors.primary }
+  featureIconBox: { width: 40, height: 40, borderRadius: 12, backgroundColor: theme.colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: theme.colors.borderSubtle },
+  featureTitle: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 14, color: theme.colors.onSurface, marginBottom: 4, letterSpacing: 0.5 },
+  featureDesc: { fontFamily: 'Inter_400Regular', fontSize: 14, color: theme.colors.onSurfaceVariant }
 });

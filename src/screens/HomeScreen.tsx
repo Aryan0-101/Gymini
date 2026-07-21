@@ -8,6 +8,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../theme';
 import { CONFIG } from '../config';
+import DuoButton from '../components/DuoButton';
 
 const { width } = Dimensions.get('window');
 
@@ -301,9 +302,13 @@ export default function HomeScreen() {
                 </Pressable>
 
                 {!selectedPlan.is_completed && selectedPlan.title !== 'Rest Day' && (
-                  <Pressable style={styles.startBtn} onPress={() => navigation.navigate('WorkoutDetail', { plan: { ...selectedPlan, exercises: JSON.parse(selectedPlan.exercises_json) } })} accessibilityRole="button" accessibilityLabel="Start Session">
-                    <Text style={styles.startBtnText}>START SESSION</Text>
-                  </Pressable>
+                  <View style={{ marginTop: 16 }}>
+                    <DuoButton 
+                      title="START SESSION" 
+                      color="primary" 
+                      onPress={() => navigation.navigate('WorkoutDetail', { plan: { ...selectedPlan, exercises: JSON.parse(selectedPlan.exercises_json) } })} 
+                    />
+                  </View>
                 )}
 
                 {!selectedPlan.is_completed && (
@@ -330,15 +335,9 @@ export default function HomeScreen() {
                <MaterialIcons name="event-available" size={48} color={theme.colors.borderSubtle} style={{ marginBottom: 16 }} />
                <Text style={styles.emptyTitle}>Nothing Scheduled</Text>
                <View style={{ width: '100%', gap: 12, marginTop: 24 }}>
-                 <Pressable style={styles.outlineBtn} onPress={() => navigation.navigate('Library', { assignToDay: selectedDayIndex })} accessibilityRole="button" accessibilityLabel="Add a workout">
-                   <Text style={styles.outlineBtnText}>Add a Workout</Text>
-                 </Pressable>
-                 <Pressable style={styles.outlineBtn} onPress={() => navigation.navigate('SavedPlans', { assignToDay: selectedDayIndex })} accessibilityRole="button" accessibilityLabel="Add a plan">
-                   <Text style={styles.outlineBtnText}>Add a Plan</Text>
-                 </Pressable>
-                 <Pressable style={styles.outlineBtn} onPress={makeRestDay} accessibilityRole="button" accessibilityLabel="Make it a rest day">
-                   <Text style={styles.outlineBtnText}>Make it a Rest Day</Text>
-                 </Pressable>
+                 <DuoButton title="Add a Workout" color="secondary" onPress={() => navigation.navigate('Library', { assignToDay: selectedDayIndex })} />
+                 <DuoButton title="Add a Plan" color="secondary" onPress={() => navigation.navigate('SavedPlans', { assignToDay: selectedDayIndex })} />
+                 <DuoButton title="Make it a Rest Day" color="surface" onPress={makeRestDay} />
                </View>
             </View>
           )}
@@ -354,13 +353,13 @@ export default function HomeScreen() {
                 <View style={styles.glassShine} />
               </View>
               <View style={{ alignItems: 'center' }}>
-                <Text style={[styles.hydrationCount, { color: glasses > 0 ? theme.colors.onPrimary : theme.colors.primary }]}>
+                <Text style={[styles.hydrationCount, { color: theme.colors.primary }]}>
                   {glasses}
                 </Text>
-                <Text style={[styles.hydrationUnit, { color: glasses > 0 ? theme.colors.surfaceMuted : theme.colors.secondary }]}>
+                <Text style={[styles.hydrationUnit, { color: theme.colors.secondary }]}>
                   GLASSES
                 </Text>
-                <Text style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 9, opacity: 0.6, marginTop: 12, letterSpacing: 0.5, color: glasses > 0 ? theme.colors.surfaceMuted : theme.colors.secondary }}>
+                <Text style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 9, opacity: 0.6, marginTop: 12, letterSpacing: 0.5, color: theme.colors.onSurfaceVariant }}>
                   TAP TO ADD • HOLD TO UNDO
                 </Text>
               </View>
@@ -371,7 +370,7 @@ export default function HomeScreen() {
           <View style={[styles.hydrationCol, { flex: 1 }]}>
              <Text style={styles.sectionLabel}>ACTIVE SESSION</Text>
              <Pressable 
-               style={[styles.hydrationCard, { flex: 1, backgroundColor: theme.colors.customInk, borderColor: theme.colors.borderSubtle, justifyContent: 'center', padding: 16, gap: 12 }]}
+               style={[styles.hydrationCard, { flex: 1, backgroundColor: theme.colors.surfaceMuted, borderColor: theme.colors.borderSubtle, justifyContent: 'center', padding: 16, gap: 12 }]}
                onPress={() => {
                   if (selectedPlan && !selectedPlan.is_completed && selectedPlan.title !== 'Rest Day') {
                     navigation.navigate('WorkoutDetail', { plan: { ...selectedPlan, exercises: JSON.parse(selectedPlan.exercises_json) } });
@@ -441,43 +440,40 @@ const styles = StyleSheet.create({
   header: { marginBottom: 16 },
   greeting: { fontFamily: 'Unbounded_700Bold', fontSize: 40, color: theme.colors.primary, lineHeight: 48, letterSpacing: -0.5 },
   
-  dayCard: { width: 44, height: 56, borderRadius: 22, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.borderSubtle, alignItems: 'center', justifyContent: 'center' },
-  dayCardActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
-  dayCardText: { fontFamily: 'Unbounded_700Bold', fontSize: 16, color: theme.colors.secondary },
-  dayCardTextActive: { color: theme.colors.onPrimary },
+  dayCard: { width: 44, height: 56, borderRadius: 22, backgroundColor: theme.colors.surface, borderWidth: 2, borderBottomWidth: 4, borderColor: theme.colors.borderSubtle, alignItems: 'center', justifyContent: 'center' },
+  dayCardActive: { backgroundColor: theme.colors.successGraph, borderColor: '#109648' },
+  dayCardText: { fontFamily: 'Unbounded_700Bold', fontSize: 16, color: theme.colors.onSurfaceVariant },
+  dayCardTextActive: { color: '#000000' },
 
   sectionLabel: { fontFamily: theme.typography.labelSm.fontFamily, color: theme.colors.secondary, fontSize: 11, letterSpacing: 1.5, marginBottom: 12, textTransform: 'uppercase' },
-  focusCard: { backgroundColor: theme.colors.customLinen, borderWidth: 2, borderColor: theme.colors.primary, borderRadius: 12, padding: 24, marginBottom: 32, overflow: 'hidden' },
+  focusCard: { backgroundColor: theme.colors.surface, borderWidth: 2, borderBottomWidth: 6, borderColor: theme.colors.borderSubtle, borderRadius: 24, padding: 24, marginBottom: 32, overflow: 'hidden' },
   focusCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, zIndex: 10 },
-  focusDate: { fontFamily: theme.typography.labelMd.fontFamily, color: theme.colors.secondary, marginBottom: 4 },
-  focusTitle: { fontFamily: 'Unbounded_700Bold', fontSize: 24, color: theme.colors.primary },
+  focusDate: { fontFamily: theme.typography.labelMd.fontFamily, color: theme.colors.onSurfaceVariant, marginBottom: 4 },
+  focusTitle: { fontFamily: 'Unbounded_700Bold', fontSize: 24, color: theme.colors.onSurface },
   focusTags: { flexDirection: 'row', gap: 8, marginBottom: 24 },
-  tagPrimary: { backgroundColor: theme.colors.surfaceMuted, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 4, borderWidth: 1, borderColor: '#26211D30' },
+  tagPrimary: { backgroundColor: theme.colors.surfaceMuted, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: theme.colors.borderSubtle },
   tagPrimaryText: { fontFamily: theme.typography.labelSm.fontFamily, color: theme.colors.primary },
-  tagSecondary: { backgroundColor: '#f1edec', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 4, borderWidth: 1, borderColor: theme.colors.borderSubtle },
+  tagSecondary: { backgroundColor: theme.colors.surfaceMuted, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: theme.colors.borderSubtle },
   tagSecondaryText: { fontFamily: theme.typography.labelSm.fontFamily, color: theme.colors.onSurface },
-  startBtn: { backgroundColor: theme.colors.accentFocus, paddingVertical: 16, borderRadius: 8, alignItems: 'center', borderWidth: 2, borderColor: theme.colors.primary },
-  startBtnText: { color: '#fff', fontFamily: theme.typography.labelMd.fontFamily, fontSize: 15, letterSpacing: 1 },
-  plusBtn: { position: 'absolute', top: 16, right: 16, zIndex: 20, backgroundColor: '#f1edec', borderRadius: 20, width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.colors.borderSubtle },
-  emptyTitle: { fontFamily: 'Unbounded_700Bold', fontSize: 20, color: theme.colors.primary },
-  outlineBtn: { borderWidth: 2, borderColor: theme.colors.primary, borderRadius: 8, paddingVertical: 12, alignItems: 'center', backgroundColor: '#fff' },
-  outlineBtnText: { fontFamily: theme.typography.labelMd.fontFamily, color: theme.colors.primary, fontSize: 14 },
+  
+  plusBtn: { position: 'absolute', top: 16, right: 16, zIndex: 20, backgroundColor: theme.colors.surfaceMuted, borderRadius: 20, width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderBottomWidth: 4, borderColor: theme.colors.borderSubtle },
+  emptyTitle: { fontFamily: 'Unbounded_700Bold', fontSize: 20, color: theme.colors.onSurface },
   
   dashboardBottomRow: { flexDirection: 'column', gap: 32 },
   hydrationCol: { gap: 12 },
   recentCol: { gap: 12 },
-  hydrationCard: { backgroundColor: '#F8F5F0', borderWidth: 2, borderColor: '#26211D', borderRadius: 12, padding: 24, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, elevation: 2, shadowColor: '#5C4A3D', shadowOffset: { width: 2, height: 2 }, shadowOpacity: 1, shadowRadius: 0 },
-  glassContainer: { width: 96, height: 128, borderWidth: 4, borderColor: '#5C4A3D', borderBottomLeftRadius: 12, borderBottomRightRadius: 12, borderTopLeftRadius: 2, borderTopRightRadius: 2, overflow: 'hidden', justifyContent: 'flex-end', position: 'relative' },
-  waterFill: { width: '100%', backgroundColor: '#7ec4cf', opacity: 0.8 },
+  hydrationCard: { backgroundColor: theme.colors.surface, borderWidth: 2, borderBottomWidth: 6, borderColor: theme.colors.borderSubtle, borderRadius: 24, padding: 24, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 },
+  glassContainer: { width: 96, height: 128, borderWidth: 4, borderColor: theme.colors.borderHighlight, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, borderTopLeftRadius: 2, borderTopRightRadius: 2, overflow: 'hidden', justifyContent: 'flex-end', position: 'relative' },
+  waterFill: { width: '100%', backgroundColor: theme.colors.secondary, opacity: 0.9 },
   glassShine: { position: 'absolute', top: 8, left: 8, width: 4, height: 80, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 4 },
-  hydrationCount: { fontFamily: 'Unbounded_700Bold', fontSize: 24, color: '#26211D' },
-  hydrationUnit: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 11, color: theme.colors.secondary, letterSpacing: 1, textTransform: 'uppercase' },
+  hydrationCount: { fontFamily: 'Unbounded_700Bold', fontSize: 24, color: theme.colors.onSurface },
+  hydrationUnit: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 11, color: theme.colors.onSurfaceVariant, letterSpacing: 1, textTransform: 'uppercase' },
 
-  recentWorkoutCard: { backgroundColor: '#F8F5F0', borderWidth: 2, borderColor: '#26211D', borderRadius: 8, padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', elevation: 2, shadowColor: '#5C4A3D', shadowOffset: { width: 2, height: 2 }, shadowOpacity: 1, shadowRadius: 0 },
-  recentTitle: { fontFamily: 'Unbounded_700Bold', fontSize: 15, color: '#26211D' },
-  recentSub: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 11, color: theme.colors.secondary, marginTop: 4 },
-  fab: { position: 'absolute', bottom: 100, right: 24, backgroundColor: theme.colors.primary, paddingHorizontal: 24, paddingVertical: 16, borderRadius: 32, flexDirection: 'row', alignItems: 'center', gap: 8, elevation: 6 },
-  fabText: { color: theme.colors.onPrimary, fontFamily: theme.typography.labelMd.fontFamily, fontSize: 16 }
+  recentWorkoutCard: { backgroundColor: theme.colors.surface, borderWidth: 2, borderBottomWidth: 4, borderColor: theme.colors.borderSubtle, borderRadius: 16, padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  recentTitle: { fontFamily: 'Unbounded_700Bold', fontSize: 15, color: theme.colors.onSurface },
+  recentSub: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 11, color: theme.colors.onSurfaceVariant, marginTop: 4 },
+  fab: { position: 'absolute', bottom: 100, right: 24, backgroundColor: theme.colors.successGraph, paddingHorizontal: 24, paddingVertical: 16, borderRadius: 32, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 2, borderBottomWidth: 6, borderColor: '#109648' },
+  fabText: { color: '#000000', fontFamily: theme.typography.labelMd.fontFamily, fontSize: 16 }
 });
 
 // End of file

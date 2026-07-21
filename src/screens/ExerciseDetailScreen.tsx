@@ -1,11 +1,14 @@
 import React, { useState, useLayoutEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { Image } from 'expo-image';
 import { useNavigation } from '@react-navigation/native';
 import { theme } from '../theme';
 import { CONFIG } from '../config';
 import ExerciseActionModal from '../components/ExerciseActionModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
+import DuoButton from '../components/DuoButton';
+import MuscleMap from '../components/MuscleMap';
 
 export default function ExerciseDetailScreen({ route }: any) {
   const { exercise } = route.params;
@@ -27,11 +30,14 @@ export default function ExerciseDetailScreen({ route }: any) {
   let parsedImages = [];
   let parsedInstructions = [];
   let parsedMuscles = [];
+  let parsedSecondaryMuscles = [];
   try {
     parsedImages = typeof exercise.images === 'string' ? JSON.parse(exercise.images) : (exercise.images || []);
     parsedInstructions = typeof exercise.instructions === 'string' ? JSON.parse(exercise.instructions) : (exercise.instructions || []);
     const pm = exercise.primary_muscles || exercise.primaryMuscles;
     parsedMuscles = typeof pm === 'string' ? JSON.parse(pm) : (pm || []);
+    const sm = exercise.secondary_muscles || exercise.secondaryMuscles;
+    parsedSecondaryMuscles = typeof sm === 'string' ? JSON.parse(sm) : (sm || []);
   } catch (e) {}
 
   return (
@@ -54,7 +60,8 @@ export default function ExerciseDetailScreen({ route }: any) {
                     <Image 
                       source={{ uri: imgPath.startsWith('http') ? imgPath : `${CONFIG.ASSET_BASE_URL}/${imgPath.replace(/\\/g, '/')}` }} 
                       style={styles.heroImage} 
-                      resizeMode="cover" 
+                      contentFit="cover" 
+                      transition={300}
                     />
                   </View>
                 ))}
@@ -108,6 +115,39 @@ export default function ExerciseDetailScreen({ route }: any) {
           </View>
 
           <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Target Muscles</Text>
+            <View style={styles.muscleMapWrapper}>
+              <MuscleMap muscles={parsedMuscles} secondaryMuscles={parsedSecondaryMuscles} size={280} />
+            </View>
+            <View style={styles.legendContainer}>
+              <View style={styles.legendGroup}>
+                <Text style={styles.legendTitle}>Primary</Text>
+                <View style={styles.chipRow}>
+                  {parsedMuscles.map((m: string) => (
+                    <View key={m} style={[styles.muscleChip, { borderColor: theme.colors.primary }]}>
+                      <View style={[styles.legendDot, { backgroundColor: theme.colors.primary }]} />
+                      <Text style={styles.muscleChipText}>{m}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+              {parsedSecondaryMuscles.length > 0 && (
+                <View style={styles.legendGroup}>
+                  <Text style={styles.legendTitle}>Secondary</Text>
+                  <View style={styles.chipRow}>
+                    {parsedSecondaryMuscles.map((m: string) => (
+                      <View key={m} style={[styles.muscleChip, { borderColor: theme.colors.secondary }]}>
+                        <View style={[styles.legendDot, { backgroundColor: theme.colors.secondary }]} />
+                        <Text style={styles.muscleChipText}>{m}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+            </View>
+          </View>
+
+          <View style={styles.section}>
             <Text style={styles.sectionTitle}>Instructions</Text>
             {parsedInstructions.length > 0 ? parsedInstructions.map((step: string, idx: number) => (
               <View key={idx} style={styles.instructionStep}>
@@ -124,14 +164,13 @@ export default function ExerciseDetailScreen({ route }: any) {
         </View>
       </ScrollView>
 
-      <Pressable 
-        style={({ pressed }) => [styles.fab, { transform: [{ scale: pressed ? 0.95 : 1 }] }]} 
-        onPress={() => setModalVisible(true)}
-        accessibilityRole="button"
-        accessibilityLabel="Add exercise"
-      >
-        <Text style={styles.fabText}>+</Text>
-      </Pressable>
+      <View style={styles.fabContainer}>
+        <DuoButton 
+          title="ADD TO WORKOUT" 
+          color="primary" 
+          onPress={() => setModalVisible(true)} 
+        />
+      </View>
       
       <ExerciseActionModal exercise={exercise} visible={modalVisible} onClose={() => setModalVisible(false)} />
     </View>
@@ -139,31 +178,39 @@ export default function ExerciseDetailScreen({ route }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.primary, maxWidth: 600, alignSelf: 'center', width: '100%' },
+  container: { flex: 1, backgroundColor: theme.colors.background, maxWidth: 600, alignSelf: 'center', width: '100%' },
   scrollContent: { paddingBottom: 100 },
-  heroImage: { width: '100%', height: '100%', backgroundColor: theme.colors.surfaceMuted },
+  heroImage: { width: '100%', height: '100%', backgroundColor: theme.colors.surface },
   paginationDots: { position: 'absolute', bottom: 40, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 8, zIndex: 10 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   dotActive: { backgroundColor: theme.colors.primary },
-  dotInactive: { backgroundColor: theme.colors.surfaceMuted, borderWidth: 1, borderColor: theme.colors.borderSubtle },
-  backButton: { position: 'absolute', left: 16, width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(250, 245, 234, 0.9)', alignItems: 'center', justifyContent: 'center', zIndex: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
-  content: { padding: 24, borderTopLeftRadius: 24, borderTopRightRadius: 24, backgroundColor: theme.colors.primary, marginTop: -24 },
-  categoryBadge: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, backgroundColor: 'rgba(250, 245, 234, 0.1)', borderRadius: 16, fontFamily: 'JetBrainsMono_500Medium', fontSize: 11, color: theme.colors.onPrimary, letterSpacing: 1, marginBottom: 12, textTransform: 'uppercase' },
-  title: { fontFamily: 'Unbounded_700Bold', fontSize: 32, color: theme.colors.onPrimary, marginBottom: 24 },
+  dotInactive: { backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.borderSubtle },
+  backButton: { position: 'absolute', left: 16, width: 44, height: 44, borderRadius: 22, backgroundColor: theme.colors.surface, alignItems: 'center', justifyContent: 'center', zIndex: 20, borderWidth: 2, borderBottomWidth: 4, borderColor: theme.colors.borderSubtle },
+  content: { padding: 24, borderTopLeftRadius: 32, borderTopRightRadius: 32, backgroundColor: theme.colors.background, marginTop: -32 },
+  categoryBadge: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, backgroundColor: theme.colors.surface, borderRadius: 16, fontFamily: 'JetBrainsMono_500Medium', fontSize: 11, color: theme.colors.onSurfaceVariant, letterSpacing: 1, marginBottom: 12, textTransform: 'uppercase', borderWidth: 2, borderColor: theme.colors.borderSubtle },
+  title: { fontFamily: 'Unbounded_700Bold', fontSize: 32, color: theme.colors.onBackground, marginBottom: 24 },
   
   metaRow: { flexDirection: 'row', gap: 16, marginBottom: 32 },
-  metaBox: { flex: 1, backgroundColor: theme.colors.surfaceMuted, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.borderSubtle },
-  metaLabel: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 11, color: theme.colors.secondary, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 },
-  metaValue: { fontFamily: 'Unbounded_600SemiBold', fontSize: 14, color: theme.colors.onPrimary },
+  metaBox: { flex: 1, backgroundColor: theme.colors.surface, padding: 16, borderRadius: 16, borderWidth: 2, borderBottomWidth: 4, borderColor: theme.colors.borderSubtle },
+  metaLabel: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 11, color: theme.colors.onSurfaceVariant, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 },
+  metaValue: { fontFamily: 'Unbounded_600SemiBold', fontSize: 14, color: theme.colors.onSurface },
   
   section: { marginBottom: 32 },
-  sectionTitle: { fontFamily: 'Unbounded_600SemiBold', fontSize: 20, color: theme.colors.onPrimary, marginBottom: 16 },
+  sectionTitle: { fontFamily: 'Unbounded_600SemiBold', fontSize: 20, color: theme.colors.onBackground, marginBottom: 16 },
+  muscleMapWrapper: { backgroundColor: theme.colors.surface, borderRadius: 16, padding: 16, borderWidth: 2, borderBottomWidth: 4, borderColor: theme.colors.borderSubtle, marginBottom: 16 },
   
-  instructionStep: { flexDirection: 'row', marginBottom: 16, gap: 16 },
-  stepNumberBadge: { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(226, 114, 90, 0.1)', borderWidth: 1, borderColor: theme.colors.accentFocus, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
-  stepNumberText: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 12, color: theme.colors.accentFocus },
-  stepText: { flex: 1, fontFamily: 'Inter_400Regular', fontSize: 16, color: theme.colors.secondary, lineHeight: 24 },
+  legendContainer: { gap: 16 },
+  legendGroup: { gap: 8 },
+  legendTitle: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 12, color: theme.colors.onSurfaceVariant, textTransform: 'uppercase', letterSpacing: 1 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  muscleChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.surface, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1, gap: 8 },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  muscleChipText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: theme.colors.onSurface, textTransform: 'capitalize' },
+
+  instructionStep: { flexDirection: 'row', marginBottom: 16, paddingRight: 16 },
+  stepNumberBadge: { width: 28, height: 28, borderRadius: 14, backgroundColor: theme.colors.surface, borderWidth: 2, borderColor: theme.colors.primary, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  stepNumberText: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 12, color: theme.colors.primary },
+  stepText: { flex: 1, fontFamily: 'Inter_400Regular', fontSize: 16, color: theme.colors.onSurfaceVariant, lineHeight: 24 },
   
-  fab: { position: 'absolute', bottom: 32, right: 24, width: 64, height: 64, borderRadius: 32, backgroundColor: theme.colors.accentFocus, alignItems: 'center', justifyContent: 'center', shadowColor: theme.colors.accentFocus, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 8 },
-  fabText: { fontFamily: 'Unbounded_600SemiBold', fontSize: 32, color: theme.colors.primary, marginTop: -4 }
+  fabContainer: { position: 'absolute', bottom: 32, left: 24, right: 24 }
 });

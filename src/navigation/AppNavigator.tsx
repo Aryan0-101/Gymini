@@ -65,7 +65,8 @@ export function AppNavigator() {
         <Stack.Screen name="Auth" component={AuthScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Home" component={MainTabs} options={{ headerShown: false }} />
         <Stack.Screen name="Builder" component={AgentBuilderScreen} options={{ title: 'AI Builder' }} />
-        <Stack.Screen name="WorkoutDetail" component={WorkoutDetailScreen} options={{ title: 'Plan Details' }} />
+        <Stack.Screen name="WorkoutDetail" component={WorkoutDetailScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="LibraryModal" component={ExerciseLibraryScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise Details', headerTransparent: true, headerTitle: '' }} />
         <Stack.Screen name="ActiveSession" component={ActiveSessionScreen} options={{ headerShown: false, presentation: 'fullScreenModal' }} />
         <Stack.Screen name="RestTimer" component={RestTimerScreen} options={{ headerShown: false, presentation: 'fullScreenModal' }} />

@@ -1,36 +1,32 @@
 export const theme = {
   colors: {
-    // Brand custom colors from Stitch Home Dashboard
-    customSand: "#F2E9D8",
-    customLinen: "#F8F5F0",
-    customMocha: "#5C4A3D",
-    customEmber: "#E2725A",
-    customApricot: "#F4D8C5",
-    customInk: "#26211D",
-
-    // Map the system tokens to the design
-    background: "#F2E9D8", // using custom-sand for background
-    onBackground: "#26211D",
-    surface: "#dbba8d", // using custom-linen for surface
-    surfaceMuted: "#F4D8C5", // using custom-apricot
-    onSurface: "#26211D",
-    onSurfaceVariant: "#5C4A3D", // mocha
+    // Spotify Dark Basics
+    background: "#090909", // Ultra dark, almost pitch black
+    onBackground: "#FFFFFF",
+    surface: "#1A1A1A", // Dark grey for cards
+    surfaceMuted: "#262626", // Slightly lighter for inner elements
+    onSurface: "#FFFFFF",
+    onSurfaceVariant: "#A0A0A0", // Secondary text
     
-    primary: "#26211D", // ink
-    onPrimary: "#F2E9D8",
+    // Brand Vibrant Accents
+    primary: "#FFB347", // Pastel amber-orange
+    onPrimary: "#1A1A1A",
     
-    secondary: "#5C4A3D",
-    onSecondary: "#F2E9D8",
+    secondary: "#82C0CC", // Pastel blue
+    onSecondary: "#1A1A1A",
     
-    accentFocus: "#E2725A", // ember
-    successGraph: "#38A169",
-    errorAlert: "#ba1a1a",
-    borderSubtle: "#26211D20", // ink with opacity
+    accentFocus: "#E2725A", // Ember/Red
+    successGraph: "#1ED760", // Spotify Neon Green
+    errorAlert: "#FF4B4B",
+    
+    // Borders
+    borderSubtle: "#333333", // Crisp borders
+    borderHighlight: "#404040",
   },
   typography: {
     displayLg: { fontFamily: 'Unbounded_700Bold', fontSize: 40, letterSpacing: -1 },
-    headlineLg: { fontFamily: 'Manrope_700Bold', fontSize: 32, letterSpacing: -0.5 },
-    headlineMd: { fontFamily: 'Manrope_600SemiBold', fontSize: 24 },
+    headlineLg: { fontFamily: 'Unbounded_700Bold', fontSize: 32, letterSpacing: -0.5 },
+    headlineMd: { fontFamily: 'Manrope_700Bold', fontSize: 24 },
     bodyLg: { fontFamily: 'Inter_400Regular', fontSize: 18 },
     bodyMd: { fontFamily: 'Inter_400Regular', fontSize: 16 },
     bodySm: { fontFamily: 'Inter_400Regular', fontSize: 14 },
@@ -46,11 +42,11 @@ export const theme = {
     marginPage: 24,
   },
   rounded: {
-    sm: 4,
-    default: 8,
-    md: 12,
-    lg: 16,
-    xl: 24,
+    sm: 6,
+    default: 12, // Chunky Duolingo style
+    md: 16,
+    lg: 24, // Very rounded cards
+    xl: 32,
     full: 9999,
   }
 };

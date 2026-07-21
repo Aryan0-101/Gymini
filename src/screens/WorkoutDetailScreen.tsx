@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Image, TextInput } from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { theme } from '../theme';
 import { CONFIG } from '../config';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import DuoButton from '../components/DuoButton';
 
 
 export default function WorkoutDetailScreen({ route }: any) {
@@ -15,7 +16,31 @@ export default function WorkoutDetailScreen({ route }: any) {
   const insets = useSafeAreaInsets();
 
   const [exercises, setExercises] = useState(plan.exercises);
+  const [planTitle, setPlanTitle] = useState(plan.title);
+  const [planDesc, setPlanDesc] = useState(plan.description);
   const isFirstRender = useRef(true);
+  const isFocused = useIsFocused();
+
+  useEffect(() => {
+    async function syncFromDb() {
+      if (plan.id) {
+        try {
+          const row = await db.getFirstAsync<any>('SELECT exercises_json FROM saved_plans WHERE id = ?', [plan.id]);
+          if (row && row.exercises_json) {
+            const dbEx = JSON.parse(row.exercises_json);
+            if (JSON.stringify(dbEx) !== JSON.stringify(exercises)) {
+              setExercises(dbEx);
+            }
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+    if (isFocused) {
+      syncFromDb();
+    }
+  }, [isFocused, plan.id, db]);
 
   useEffect(() => {
     if (isFirstRender.current) {
@@ -24,30 +49,33 @@ export default function WorkoutDetailScreen({ route }: any) {
     }
     const timer = setTimeout(() => {
       if (plan.id) {
-        const payload = exercises.map((e: any) => ({
-          id: e.id,
-          name: e.name,
-          sets: e.sets,
-          reps: e.reps,
-          rest_seconds: e.rest_seconds
-        }));
-        db.runAsync('UPDATE saved_plans SET exercises_json = ? WHERE id = ?', [JSON.stringify(payload), plan.id]).catch(console.error);
+        db.runAsync('UPDATE saved_plans SET exercises_json = ?, title = ?, description = ? WHERE id = ?', [
+          JSON.stringify(exercises), 
+          planTitle || 'Custom Plan', 
+          planDesc || '', 
+          plan.id
+        ]).catch(console.error);
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [exercises, db, plan.id]);
+  }, [exercises, planTitle, planDesc, db, plan.id]);
 
   useEffect(() => {
     async function enrichExercises() {
       try {
         const ids = exercises.map((e: any) => e.id).filter(Boolean);
         if (ids.length === 0) return;
+        
+        // Only enrich if there are missing images/equipment
+        const needsEnrichment = exercises.some((e: any) => !e.equipment || !e.images);
+        if (!needsEnrichment) return;
+
         const placeholders = ids.map(() => '?').join(',');
-        const fullData = await db.getAllAsync<any>(`SELECT id, equipment, images FROM exercises WHERE id IN (${placeholders})`, ...ids);
+        const fullData = await db.getAllAsync<any>(`SELECT id, equipment, images, secondary_muscles FROM exercises WHERE id IN (${placeholders})`, ...ids);
         
         const enriched = exercises.map((ex: any) => {
           const match = fullData.find(d => d.id === ex.id);
-          return match ? { ...ex, equipment: match.equipment, images: match.images } : ex;
+          return match && (!ex.equipment || !ex.images) ? { ...ex, equipment: match.equipment, images: match.images, secondaryMuscles: match.secondary_muscles } : ex;
         });
         setExercises(enriched);
       } catch (e) {
@@ -55,7 +83,7 @@ export default function WorkoutDetailScreen({ route }: any) {
       }
     }
     enrichExercises();
-  }, [plan.exercises, db]);
+  }, [exercises, db]);
 
 
 
@@ -84,18 +112,40 @@ export default function WorkoutDetailScreen({ route }: any) {
     ]);
   };
 
+  const handleBack = async () => {
+    if (exercises.length === 0 && planTitle === 'Custom Plan') {
+      try {
+        await db.runAsync('DELETE FROM saved_plans WHERE id = ?', [plan.id]);
+      } catch(e) {}
+    }
+    navigation.goBack();
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 16) }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-          <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Go back" style={{ marginRight: 16 }}>
-            <MaterialIcons name="arrow-back" size={28} color={theme.colors.onPrimary} />
+          <Pressable onPress={handleBack} accessibilityRole="button" accessibilityLabel="Go back" style={{ marginRight: 16 }}>
+            <MaterialIcons name="arrow-back" size={28} color={theme.colors.onSurface} />
           </Pressable>
           <View style={{ flex: 1 }}>
-            <Text style={styles.title}>{plan.title}</Text>
+            <TextInput 
+              style={[styles.title, { padding: 0, margin: 0, borderWidth: 0 }]} 
+              value={planTitle}
+              onChangeText={setPlanTitle}
+              placeholder="Workout Name"
+              placeholderTextColor={theme.colors.onSurfaceVariant}
+            />
           </View>
         </View>
-        <Text style={styles.desc}>{plan.description}</Text>
+        <TextInput 
+          style={[styles.desc, { padding: 0, margin: 0, borderWidth: 0 }]} 
+          value={planDesc}
+          onChangeText={setPlanDesc}
+          placeholder="Workout Description"
+          placeholderTextColor={theme.colors.onSurfaceVariant}
+          multiline
+        />
 
 
 
@@ -156,35 +206,51 @@ export default function WorkoutDetailScreen({ route }: any) {
             </View>
           );
         })}
+
+        <Pressable 
+          style={styles.addExerciseBtn} 
+          onPress={() => navigation.navigate('LibraryModal', { assignToPlanId: plan.id })}
+        >
+          <MaterialIcons name="add" size={24} color={theme.colors.onSurfaceVariant} />
+          <Text style={styles.addExerciseText}>ADD EXERCISE</Text>
+        </Pressable>
       </ScrollView>
 
-      <Pressable 
-        style={styles.fab} 
-        onPress={() => navigation.navigate('ActiveSession', { workout: { ...plan, exercises } })}
-      >
-        <Text style={styles.fabText}>Start Workout</Text>
-      </Pressable>
+      <View style={styles.fabContainer}>
+        <DuoButton 
+          title="START WORKOUT" 
+          color="primary" 
+          onPress={() => {
+            if (exercises.length === 0) {
+              Alert.alert('No Exercises', 'Please add some exercises to this plan before starting.');
+              return;
+            }
+            navigation.navigate('ActiveSession', { workout: { ...plan, exercises } });
+          }} 
+        />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.primary, maxWidth: 600, alignSelf: 'center', width: '100%' },
+  container: { flex: 1, backgroundColor: theme.colors.background, maxWidth: 600, alignSelf: 'center', width: '100%' },
   content: { padding: 24, paddingBottom: 100 },
-  title: { fontFamily: 'Unbounded_700Bold', fontSize: 32, color: theme.colors.onPrimary, marginBottom: 8, flex: 1 },
-  desc: { fontFamily: 'Inter_400Regular', fontSize: 16, color: theme.colors.secondary, marginBottom: 32, lineHeight: 24 },
-  sectionTitle: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 12, color: theme.colors.secondary, letterSpacing: 2, marginBottom: 16, textTransform: 'uppercase' },
-  exCard: { backgroundColor: theme.colors.surfaceMuted, borderRadius: 8, padding: 16, marginBottom: 12 },
-  exName: { fontFamily: 'Unbounded_600SemiBold', fontSize: 16, color: theme.colors.primary, marginBottom: 4 },
-  exEquip: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 11, color: theme.colors.secondary, textTransform: 'uppercase', marginBottom: 16 },
-  exImage: { width: 60, height: 60, borderRadius: 8, marginRight: 12, backgroundColor: theme.colors.background },
-  controlsRow: { flexDirection: 'row', gap: 16, borderTopWidth: 1, borderTopColor: 'rgba(38,33,29,0.1)', paddingTop: 16 },
+  title: { fontFamily: 'Unbounded_700Bold', fontSize: 32, color: theme.colors.onBackground, marginBottom: 8, flex: 1 },
+  desc: { fontFamily: 'Inter_400Regular', fontSize: 16, color: theme.colors.onSurfaceVariant, marginBottom: 32, lineHeight: 24 },
+  sectionTitle: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 12, color: theme.colors.onSurfaceVariant, letterSpacing: 2, marginBottom: 16, textTransform: 'uppercase' },
+  exCard: { backgroundColor: theme.colors.surface, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 2, borderBottomWidth: 6, borderColor: theme.colors.borderSubtle },
+  exName: { fontFamily: 'Unbounded_600SemiBold', fontSize: 16, color: theme.colors.onSurface, marginBottom: 4 },
+  exEquip: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 11, color: theme.colors.onSurfaceVariant, textTransform: 'uppercase', marginBottom: 16 },
+  exImage: { width: 60, height: 60, borderRadius: 12, marginRight: 12, backgroundColor: theme.colors.background },
+  controlsRow: { flexDirection: 'row', gap: 16, borderTopWidth: 2, borderTopColor: theme.colors.borderSubtle, paddingTop: 16 },
   controlGroup: { flex: 1 },
-  controlLabel: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 10, color: theme.colors.secondary, marginBottom: 8 },
-  adjuster: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(38,33,29,0.05)', borderRadius: 4, padding: 4 },
-  controlBtn: { padding: 8, backgroundColor: 'rgba(38,33,29,0.05)', borderRadius: 4 },
-  controlBtnText: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 16, color: theme.colors.primary },
-  controlValue: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 14, color: theme.colors.primary, minWidth: 40, textAlign: 'center' },
-  fab: { position: 'absolute', bottom: 32, left: 24, right: 24, backgroundColor: theme.colors.accentFocus, paddingVertical: 16, borderRadius: 8, alignItems: 'center' },
-  fabText: { fontFamily: 'Unbounded_700Bold', fontSize: 16, color: theme.colors.primary }
+  controlLabel: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 10, color: theme.colors.onSurfaceVariant, marginBottom: 8 },
+  adjuster: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.background, borderRadius: 8, padding: 4, borderWidth: 2, borderColor: theme.colors.borderSubtle },
+  controlBtn: { padding: 8, backgroundColor: theme.colors.surface, borderRadius: 6 },
+  controlBtnText: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 16, color: theme.colors.onSurface },
+  controlValue: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 14, color: theme.colors.onSurface, minWidth: 40, textAlign: 'center' },
+  fabContainer: { position: 'absolute', bottom: 32, left: 24, right: 24 },
+  addExerciseBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 16, backgroundColor: theme.colors.surfaceMuted, borderRadius: 16, borderWidth: 2, borderBottomWidth: 4, borderColor: theme.colors.borderSubtle, borderStyle: 'dashed', marginTop: 16, marginBottom: 32 },
+  addExerciseText: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 14, color: theme.colors.onSurfaceVariant, marginLeft: 8 }
 });

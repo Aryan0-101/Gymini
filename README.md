@@ -28,8 +28,9 @@
 
 ## ✨ Features
 
-- 🧠 **AI Agent Builder:** Stop guessing. Tell the AI your constraints (e.g., *"I have 45 minutes, a pair of dumbbells, and want to hit chest"*), and it will cross-reference its database to output a highly optimized 5-exercise routine.
+- 🧠 **AI Agent Builder:** Stop guessing. Tell the AI your constraints (e.g., *"I have 45 minutes, a pair of dumbbells, and want to hit chest"*), and it will cross-reference its database to output a highly optimized 5-exercise routine. Powered by Gemini, with built-in fallback support for open-source models via OpenRouter (e.g., Gemma 2, Llama 3).
 - 📚 **Massive Offline Library:** Powered by a local SQLite database containing over **800+ exercises**. Includes rich metadata, targeting specific primary/secondary muscle groups, and required equipment.
+- 🗺️ **Interactive Anatomy Heatmaps:** Dynamic, two-tone SVG body maps that visually highlight exact primary (amber) and secondary (blue) muscle groups targeted by each exercise.
 - ⏱️ **Active Session Tracking:** A dynamic, distraction-free active session UI. 
   - Automatically hides weight inputs for bands and bodyweight movements.
   - Native animated rest timers keep you focused between sets.
@@ -71,9 +72,11 @@ Want to compile the app yourself or contribute? It's incredibly easy to get star
    ```
 
 3. **Configure Environment Variables:**
-   Create a `.env` file in the root of the project and add your Gemini API Key:
+   Create a `.env` file in the root of the project and add your API Keys:
    ```env
    EXPO_PUBLIC_GEMINI_API_KEY=your_gemini_api_key_here
+   # Optional: Add OpenRouter key to bypass Gemini rate limits using open-source models
+   EXPO_PUBLIC_OPENROUTER_API_KEY=your_openrouter_api_key_here
    ```
 
 4. **Start the Expo server:**
@@ -88,7 +91,7 @@ Want to compile the app yourself or contribute? It's incredibly easy to get star
 
 - **Framework:** React Native + Expo
 - **Database:** `expo-sqlite` (Local Offline Database)
-- **AI Integration:** Google Gemini REST API (via `fetch`)
+- **AI Integration:** Google Gemini REST API & OpenRouter Support (via `fetch`)
 - **Navigation:** React Navigation (Native Stack)
 - **Styling:** Custom StyleSheet Design System (Vanilla RN)
 

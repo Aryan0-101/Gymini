@@ -6,4 +6,7 @@ export const CONFIG = {
   
   // Gemini API Key accessed securely via Expo environment variables
   GEMINI_API_KEY: process.env.EXPO_PUBLIC_GEMINI_API_KEY || "",
+  
+  // OpenRouter API Key (Optional fallback if Gemini hits rate limits)
+  OPENROUTER_API_KEY: process.env.EXPO_PUBLIC_OPENROUTER_API_KEY || "",
 };
